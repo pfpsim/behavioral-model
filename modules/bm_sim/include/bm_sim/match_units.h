@@ -31,19 +31,17 @@
 #include <atomic>
 #include <utility>  // for pair<>
 
+#include "match_unit_types.h"
 #include "match_error_codes.h"
 #include "bytecontainer.h"
 #include "phv.h"
 #include "packet.h"
 #include "handle_mgr.h"
-#include "lpm_trie.h"
+#include "lookup_structures.h"
 #include "counters.h"
 #include "meters.h"
 
 namespace bm {
-
-typedef uintptr_t internal_handle_t;
-typedef uint64_t entry_handle_t;
 
 // using string and not ByteContainer for efficiency
 struct MatchKeyParam {
@@ -73,10 +71,6 @@ struct MatchKeyParam {
   std::string key;
   std::string mask{};  // optional
   int prefix_length{0};  // optional
-};
-
-enum class MatchUnitType {
-  EXACT, LPM, TERNARY
 };
 
 
