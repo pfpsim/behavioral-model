@@ -433,14 +433,14 @@ struct TernaryEntry : public AbstractEntry<V> {
 };
 
 template <typename V, template <typename EV=V> class E>
-class MatchUnit : public MatchUnitAbstract<V> {
+class MatchUnitGeneric : public MatchUnitAbstract<V> {
  public:
   typedef typename MatchUnitAbstract<V>::MatchUnitLookup MatchUnitLookup;
   typedef E<> Entry;
   typedef AbstractLookupStructure<Entry> LookupStructure;
 
  public:
-  MatchUnit(size_t size, const MatchKeyBuilder &match_key_builder)
+  MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder)
     : MatchUnitAbstract<V>(size, match_key_builder),
       entries(size) {
   }
@@ -479,13 +479,13 @@ class MatchUnit : public MatchUnitAbstract<V> {
 // when using them elsewhere.
 
 template <typename V>
-using MatchUnitExact = MatchUnit<V, ExactEntry>;
+using MatchUnitExact = MatchUnitGeneric<V, ExactEntry>;
 
 template <typename V>
-using MatchUnitLPM = MatchUnit<V, LPMEntry>;
+using MatchUnitLPM = MatchUnitGeneric<V, LPMEntry>;
 
 template <typename V>
-using MatchUnitTernary = MatchUnit<V, TernaryEntry>;
+using MatchUnitTernary = MatchUnitGeneric<V, TernaryEntry>;
 
 
 }  // namespace bm
