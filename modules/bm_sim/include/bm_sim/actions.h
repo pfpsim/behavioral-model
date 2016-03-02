@@ -461,9 +461,15 @@ class ActionPrimitive :  public ActionPrimitive_ {
 
  private:
   unpack_caller<Args...> caller;
-  PHV *phv;
-  Packet *pkt;
+  static thread_local PHV *phv;
+  static thread_local Packet *pkt;
 };
+
+template <typename... Args>
+thread_local PHV *ActionPrimitive<Args ...>::phv = nullptr;
+
+template <typename... Args>
+thread_local Packet *ActionPrimitive<Args ...>::pkt = nullptr;
 
 
 // forward declaration
