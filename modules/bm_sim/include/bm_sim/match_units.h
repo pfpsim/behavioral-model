@@ -425,12 +425,28 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
   typedef LookupStructureInterface<Entry> LookupStructure;
 
  public:
-  template <typename
-    std::enable_if<Entry::mut == MatchUnitType::LPM, int>::type = 0>
+#define ENABLE_IF(ENABLE_IF_TYPE) template <class Enable=Entry, typename \
+    std::enable_if<Enable::mut == MatchUnitType::ENABLE_IF_TYPE, int>::type = 0>
+
+  ENABLE_IF(LPM)
   MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder)
     : MatchUnitAbstract<V>(size, match_key_builder),
       entries(size), lookupStructure{LPMTrie<Entry>(32)} // TODO(gordon) this is temporary
   { }
+
+  ENABLE_IF(EXACT)
+  MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder)
+    : MatchUnitAbstract<V>(size, match_key_builder),
+      entries(size), lookupStructure{ExactMap<Entry>()} // TODO(gordon) this is temporary
+  { }
+
+  ENABLE_IF(TERNARY)
+  MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder)
+    : MatchUnitAbstract<V>(size, match_key_builder),
+      entries(size), lookupStructure{TernaryMap<Entry>()} // TODO(gordon) this is temporary
+  { }
+
+#undef ENABLE_IF
 
  private:
   MatchErrorCode add_entry_(const std::vector<MatchKeyParam> &match_key,

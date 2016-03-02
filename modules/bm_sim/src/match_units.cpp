@@ -778,12 +778,12 @@ namespace {
 
   template <typename T,
             typename std::enable_if<T::mut == MatchUnitType::TERNARY, int>::type = 0>
-  void set_priority(const T & entry, int p){
+  void set_priority(T & entry, int p){
     entry.priority = p;
   }
   template <typename T,
             typename std::enable_if<T::mut != MatchUnitType::TERNARY, int>::type = 0>
-  void set_priority(const T & entry, int p){
+  void set_priority(T & entry, int p){
     (void) entry; // dodge unused param error
     (void) p;
   }
@@ -960,13 +960,13 @@ template class MatchUnitAbstract<MatchTableIndirect::IndirectIndex>;
 
 // The following are all instantiation of MatchUnitGeneric, based on the various
 // aliases created in match_units.h
-//template class MatchUnitGeneric<MatchTableAbstract::ActionEntry,   ExactEntry>;
-//template class MatchUnitGeneric<MatchTableIndirect::IndirectIndex, ExactEntry>;
+template class MatchUnitGeneric<MatchTableAbstract::ActionEntry,   ExactEntry>;
+template class MatchUnitGeneric<MatchTableIndirect::IndirectIndex, ExactEntry>;
 
 template class MatchUnitGeneric<MatchTableAbstract::ActionEntry,   LPMEntry>;
 template class MatchUnitGeneric<MatchTableIndirect::IndirectIndex, LPMEntry>;
 
-//template class MatchUnitGeneric<MatchTableAbstract::ActionEntry,   TernaryEntry>;
-//template class MatchUnitGeneric<MatchTableIndirect::IndirectIndex, TernaryEntry>;
+template class MatchUnitGeneric<MatchTableAbstract::ActionEntry,   TernaryEntry>;
+template class MatchUnitGeneric<MatchTableIndirect::IndirectIndex, TernaryEntry>;
 
 }  // namespace bm
