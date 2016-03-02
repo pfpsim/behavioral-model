@@ -376,35 +376,27 @@ class MatchUnitAbstract : public MatchUnitAbstract_ {
 template <typename V>
 struct AbstractEntry {
   AbstractEntry() {}
-  AbstractEntry(ByteContainer key, V value, uint32_t version);
+  AbstractEntry(ByteContainer key, V value, uint32_t version)
    : key(std::move(key)), value(std::move(value)), version(version) { }
-  // Pure virtual destructor to enforce that this class is never
-  // instantiated directly.
-  virtual ~AbstractEntry() = 0;
 
   ByteContainer key{};
   V value{};
   uint32_t version{0};
 };
 
-// Implementation for pure virtual desctructor
-template <typename V>
-AbstractEntry<V>::~AbstractEntry(){}
 
 template <typename V>
 struct ExactEntry : public AbstractEntry<V> {
   using AbstractEntry<V>::AbstractEntry;
-  virtual ~ExactEntry() = default;
 
-  static constexpr MatchUnitType mut = MatchUnitType::Exact;
+  static constexpr MatchUnitType mut = MatchUnitType::EXACT;
 };
 
 template <typename V>
 struct LPMEntry : public AbstractEntry<V> {
  LPMEntry() {}
- LPMEntry(ByteContainer key, int prefix_length, V value, uint32_t version);
-   : AbstractEntry(key, value, version), prefix_length(prefix_length) {}
- virtual ~LPMEntry() = default;
+ LPMEntry(ByteContainer key, int prefix_length, V value, uint32_t version)
+   : AbstractEntry<V>(key, value, version), prefix_length(prefix_length) {}
 
  int prefix_length{0};
 
@@ -416,9 +408,8 @@ struct TernaryEntry : public AbstractEntry<V> {
   TernaryEntry() { }
   TernaryEntry(ByteContainer key, ByteContainer mask, int priority, V value,
         uint32_t version)
-    : AbstractEntry(key, value, version), mask(std::move(mask)),
+    : AbstractEntry<V>(key, value, version), mask(std::move(mask)),
       priority(priority) { }
-  virtual ~TernaryEntry() = default;
 
   ByteContainer mask{};
   int priority{0};
@@ -431,13 +422,15 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
  public:
   typedef typename MatchUnitAbstract<V>::MatchUnitLookup MatchUnitLookup;
   typedef E<> Entry;
-  typedef AbstractLookupStructure<Entry> LookupStructure;
+  typedef LookupStructureInterface<Entry> LookupStructure;
 
  public:
+  template <typename
+    std::enable_if<Entry::mut == MatchUnitType::LPM, int>::type = 0>
   MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder)
     : MatchUnitAbstract<V>(size, match_key_builder),
-      entries(size) {
-  }
+      entries(size), lookupStructure{LPMTrie<Entry>(32)} // TODO(gordon) this is temporary
+  { }
 
  private:
   MatchErrorCode add_entry_(const std::vector<MatchKeyParam> &match_key,

@@ -758,12 +758,44 @@ MatchUnitAbstract<V>::reset_state() {
 
 
 
+namespace {
+  // Utility to transparently either get the real priority value from a ternary entry
+  // or simply return -1 for other types of entries
 
-template<typename V>
-typename MatchUnitGeneric<V>::MatchUnitLookup
-MatchUnitGeneric<V>::lookup_key(const ByteContainer &key) const {
+  template <typename T,
+            typename std::enable_if<T::mut == MatchUnitType::TERNARY, int>::type = 0>
+  int get_priority(const T & entry){
+    return entry.priority;
+  }
+  template <typename T,
+            typename std::enable_if<T::mut != MatchUnitType::TERNARY, int>::type = 0>
+  int get_priority(const T & entry){
+    (void) entry; // dodge unused param error
+    return -1;
+  }
+
+  // Matching setter utility
+
+  template <typename T,
+            typename std::enable_if<T::mut == MatchUnitType::TERNARY, int>::type = 0>
+  void set_priority(const T & entry, int p){
+    entry.priority = p;
+  }
+  template <typename T,
+            typename std::enable_if<T::mut != MatchUnitType::TERNARY, int>::type = 0>
+  void set_priority(const T & entry, int p){
+    (void) entry; // dodge unused param error
+    (void) p;
+  }
+
+} // anonymous namespace
+
+
+template <typename V, template <typename EV=V> class E>
+typename MatchUnitGeneric<V,E>::MatchUnitLookup
+MatchUnitGeneric<V,E>::lookup_key(const ByteContainer &key) const {
   internal_handle_t handle_;
-  bool entry_found = /* XXX */ LOOKUP(key, &handle);
+  bool entry_found = lookupStructure.lookup(key, &handle_);
   if (entry_found) {
     const Entry &entry = entries[handle_];
     entry_handle_t handle = HANDLE_SET(entry.version, handle_);
@@ -772,9 +804,9 @@ MatchUnitGeneric<V>::lookup_key(const ByteContainer &key) const {
   return MatchUnitLookup::empty_entry();
 }
 
-template<typename V>
+template <typename V, template <typename EV=V> class E>
 MatchErrorCode
-MatchUnitGeneric<V>::add_entry_(const std::vector<MatchKeyParam> &match_key,
+MatchUnitGeneric<V,E>::add_entry_(const std::vector<MatchKeyParam> &match_key,
                             V value, entry_handle_t *handle, int priority) {
   const auto &KeyB = this->match_key_builder;
 
@@ -793,8 +825,8 @@ MatchUnitGeneric<V>::add_entry_(const std::vector<MatchKeyParam> &match_key,
   KeyB.apply_big_mask(&entry.key);
 
   // check if the key is already present
-  entry.priority = priority; // For Ternary
-  if (/* XXX */HAS_KEY(entry))
+  set_priority(entry, priority); // For Ternary
+  if (lookupStructure.entry_exists(entry))
     return MatchErrorCode::DUPLICATE_ENTRY;
 
   internal_handle_t handle_;
@@ -805,7 +837,7 @@ MatchUnitGeneric<V>::add_entry_(const std::vector<MatchKeyParam> &match_key,
   *handle = HANDLE_SET(version, handle_);
 
   // key is copied, which is not great
-  /* XXX */STORE_ENTRY(entry, handle_);
+  lookupStructure.store_entry(entry, handle_);
   entry.value = std::move(value);
   entry.version = version;
   entries[handle_] = std::move(entry);
@@ -813,23 +845,23 @@ MatchUnitGeneric<V>::add_entry_(const std::vector<MatchKeyParam> &match_key,
   return MatchErrorCode::SUCCESS;
 }
 
-template<typename V>
+template <typename V, template <typename EV=V> class E>
 MatchErrorCode
-MatchUnitGeneric<V>::delete_entry_(entry_handle_t handle) {
+MatchUnitGeneric<V,E>::delete_entry_(entry_handle_t handle) {
   internal_handle_t handle_ = HANDLE_INTERNAL(handle);
   if (!this->valid_handle_(handle_)) return MatchErrorCode::INVALID_HANDLE;
   Entry &entry = entries[handle_];
   if (HANDLE_VERSION(handle) != entry.version)
     return MatchErrorCode::EXPIRED_HANDLE;
   entry.version += 1;
-  /* XXX */DELETE_ENTRY(entry);
+  lookupStructure.delete_entry(entry);
 
   return this->unset_handle(handle_);
 }
 
-template<typename V>
+template <typename V, template <typename EV=V> class E>
 MatchErrorCode
-MatchUnitGeneric<V>::modify_entry_(entry_handle_t handle, V value) {
+MatchUnitGeneric<V,E>::modify_entry_(entry_handle_t handle, V value) {
   internal_handle_t handle_ = HANDLE_INTERNAL(handle);
   if (!this->valid_handle_(handle_)) return MatchErrorCode::INVALID_HANDLE;
   Entry &entry = entries[handle_];
@@ -840,9 +872,9 @@ MatchUnitGeneric<V>::modify_entry_(entry_handle_t handle, V value) {
   return MatchErrorCode::SUCCESS;
 }
 
-template<typename V>
+template <typename V, template <typename EV=V> class E>
 MatchErrorCode
-MatchUnitGeneric<V>::get_value_(entry_handle_t handle, const V **value) {
+MatchUnitGeneric<V,E>::get_value_(entry_handle_t handle, const V **value) {
   internal_handle_t handle_ = HANDLE_INTERNAL(handle);
   if (!this->valid_handle_(handle_)) return MatchErrorCode::INVALID_HANDLE;
   Entry &entry = entries[handle_];
@@ -853,9 +885,9 @@ MatchUnitGeneric<V>::get_value_(entry_handle_t handle, const V **value) {
   return MatchErrorCode::SUCCESS;
 }
 
-template<typename V>
+template <typename V, template <typename EV=V> class E>
 MatchErrorCode
-MatchUnitGeneric<V>::get_entry_(entry_handle_t handle,
+MatchUnitGeneric<V,E>::get_entry_(entry_handle_t handle,
                             std::vector<MatchKeyParam> *match_key,
                             const V **value, int *priority) const {
   internal_handle_t handle_ = HANDLE_INTERNAL(handle);
@@ -867,14 +899,14 @@ MatchUnitGeneric<V>::get_entry_(entry_handle_t handle,
   *match_key = this->match_key_builder.entry_to_match_params(entry);
   *value = &entry.value;
   // TODO(gordon) is this ok for LPM and Exact?
-  if (priority) *priority = entry.priority;
+  if (priority) *priority = get_priority(entry);
 
   return MatchErrorCode::SUCCESS;
 }
 
-template<typename V>
+template <typename V, template <typename EV=V> class E>
 MatchErrorCode
-MatchUnitGeneric<V>::dump_match_entry_(std::ostream *out,
+MatchUnitGeneric<V,E>::dump_match_entry_(std::ostream *out,
                                    entry_handle_t handle) const {
   internal_handle_t handle_ = HANDLE_INTERNAL(handle);
   const Entry &entry = entries[handle_];
@@ -886,18 +918,18 @@ MatchUnitGeneric<V>::dump_match_entry_(std::ostream *out,
   *out << "Dumping entry " << handle << "\n";
   this->dump_key_params(
       out, this->match_key_builder.entry_to_match_params(entry),
-      entry.priority);
+      get_priority(entry));
   return MatchErrorCode::SUCCESS;
 }
 
-template<typename V>
+template <typename V, template <typename EV=V> class E>
 void
-MatchUnitGeneric<V>::dump_(std::ostream *stream) const {
+MatchUnitGeneric<V,E>::dump_(std::ostream *stream) const {
   for (internal_handle_t handle_ : this->handles) {
     const Entry &entry = entries[handle_];
     (*stream) << HANDLE_SET(entry.version, handle_) << ": "
               << this->match_key_builder.key_to_string(entry.key, " ");
-    /* XXX */ switch(TYPE){
+    /* XXX  switch(TYPE){
       case LPM:
         (*stream) << " / " << entry.prefix_length;
         break;
@@ -905,18 +937,18 @@ MatchUnitGeneric<V>::dump_(std::ostream *stream) const {
         (*stream) << " &&& " << entry.mask.to_hex();
         break;
       default:case Exact:break;
-    }
+    }*/
     (*stream) << " => ";
     entry.value.dump(stream);
     (*stream) << "\n";
   }
 }
 
-template<typename V>
+template <typename V, template <typename EV=V> class E>
 void
-MatchUnitGeneric<V>::reset_state_() {
+MatchUnitGeneric<V,E>::reset_state_() {
   entries = std::vector<Entry>(this->size);
-  /* XXX */CLEAR();
+  lookupStructure.clear();
 }
 
 // explicit template instantiation
@@ -926,13 +958,15 @@ MatchUnitGeneric<V>::reset_state_() {
 template class MatchUnitAbstract<MatchTableAbstract::ActionEntry>;
 template class MatchUnitAbstract<MatchTableIndirect::IndirectIndex>;
 
-template class MatchUnitExact<MatchTableAbstract::ActionEntry>;
-template class MatchUnitExact<MatchTableIndirect::IndirectIndex>;
+// The following are all instantiation of MatchUnitGeneric, based on the various
+// aliases created in match_units.h
+//template class MatchUnitGeneric<MatchTableAbstract::ActionEntry,   ExactEntry>;
+//template class MatchUnitGeneric<MatchTableIndirect::IndirectIndex, ExactEntry>;
 
-template class MatchUnitLPM<MatchTableAbstract::ActionEntry>;
-template class MatchUnitLPM<MatchTableIndirect::IndirectIndex>;
+template class MatchUnitGeneric<MatchTableAbstract::ActionEntry,   LPMEntry>;
+template class MatchUnitGeneric<MatchTableIndirect::IndirectIndex, LPMEntry>;
 
-template class MatchUnitTernary<MatchTableAbstract::ActionEntry>;
-template class MatchUnitTernary<MatchTableIndirect::IndirectIndex>;
+//template class MatchUnitGeneric<MatchTableAbstract::ActionEntry,   TernaryEntry>;
+//template class MatchUnitGeneric<MatchTableIndirect::IndirectIndex, TernaryEntry>;
 
 }  // namespace bm
