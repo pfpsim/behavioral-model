@@ -377,38 +377,75 @@ class MatchUnitAbstract : public MatchUnitAbstract_ {
   virtual MatchUnitLookup lookup_key(const ByteContainer &key) const = 0;
 };
 
-// TODO(antonin):
-// It seems that with the recent additions, these classes would really benefit
-// from inheriting from a common ancestor templatized by the entry type
+// Entry types.
 
 template <typename V>
-class MatchUnitExact : public MatchUnitAbstract<V> {
+struct AbstractEntry {
+  AbstractEntry() {}
+  AbstractEntry(ByteContainer key, V value, uint32_t version);
+   : key(std::move(key)), value(std::move(value)), version(version) { }
+  // Pure virtual destructor to enforce that this class is never
+  // instantiated directly.
+  virtual ~AbstractEntry() = 0;
+
+  ByteContainer key{};
+  V value{};
+  uint32_t version{0};
+};
+
+// Implementation for pure virtual desctructor
+template <typename V>
+AbstractEntry<V>::~AbstractEntry(){}
+
+template <typename V>
+struct ExactEntry : public AbstractEntry<V> {
+  using AbstractEntry<V>::AbstractEntry;
+  virtual ~ExactEntry() = default;
+
+  static constexpr MatchUnitType mut = MatchUnitType::Exact;
+};
+
+template <typename V>
+struct LPMEntry : public AbstractEntry<V> {
+ LPMEntry() {}
+ LPMEntry(ByteContainer key, int prefix_length, V value, uint32_t version);
+   : AbstractEntry(key, value, version), prefix_length(prefix_length) {}
+ virtual ~LPMEntry() = default;
+
+ int prefix_length{0};
+
+ static constexpr MatchUnitType mut = MatchUnitType::LPM;
+};
+
+template <typename V>
+struct TernaryEntry : public AbstractEntry<V> {
+  TernaryEntry() { }
+  TernaryEntry(ByteContainer key, ByteContainer mask, int priority, V value,
+        uint32_t version)
+    : AbstractEntry(key, value, version), mask(std::move(mask)),
+      priority(priority) { }
+  virtual ~TernaryEntry() = default;
+
+  ByteContainer mask{};
+  int priority{0};
+
+  static constexpr MatchUnitType mut = MatchUnitType::TERNARY;
+};
+
+template <typename V, template <typename EV=V> class E>
+class MatchUnit : public MatchUnitAbstract<V> {
  public:
   typedef typename MatchUnitAbstract<V>::MatchUnitLookup MatchUnitLookup;
+  typedef E<> Entry;
+  typedef AbstractLookupStructure<Entry> LookupStructure;
 
  public:
-  MatchUnitExact(size_t size, const MatchKeyBuilder &match_key_builder)
+  MatchUnit(size_t size, const MatchKeyBuilder &match_key_builder)
     : MatchUnitAbstract<V>(size, match_key_builder),
       entries(size) {
-    entries_map.reserve(size);
   }
 
  private:
-  // TODO(antonin): have all Entry structs inherit from a common base?
-  struct Entry {
-    Entry() { }
-
-    Entry(ByteContainer key, V value, uint32_t version)
-      : key(std::move(key)), value(std::move(value)), version(version) { }
-
-    ByteContainer key{};
-    V value{};
-    uint32_t version{0};
-
-    static constexpr MatchUnitType mut = MatchUnitType::EXACT;
-  };
-
- private:
   MatchErrorCode add_entry_(const std::vector<MatchKeyParam> &match_key,
                             V value,  // by value for possible std::move
                             entry_handle_t *handle,
@@ -435,126 +472,21 @@ class MatchUnitExact : public MatchUnitAbstract<V> {
 
  private:
   std::vector<Entry> entries{};
-  std::unordered_map<ByteContainer, entry_handle_t, ByteContainerKeyHash>
-  entries_map{};
+  LookupStructure & lookupStructure; // TODO maybe smart pointer instead?
 };
+
+// Alias all of our concrete MatchUnit types for convenience
+// when using them elsewhere.
 
 template <typename V>
-class MatchUnitLPM : public MatchUnitAbstract<V> {
- public:
-  typedef typename MatchUnitAbstract<V>::MatchUnitLookup MatchUnitLookup;
-
- public:
-  MatchUnitLPM(size_t size, const MatchKeyBuilder &match_key_builder)
-    : MatchUnitAbstract<V>(size, match_key_builder),
-      entries(size),
-      entries_trie(this->nbytes_key) { }
-
- private:
-  struct Entry {
-    Entry() { }
-
-    Entry(ByteContainer key, int prefix_length, V value, uint32_t version)
-      : key(std::move(key)), prefix_length(prefix_length),
-        value(std::move(value)), version(version) { }
-
-    ByteContainer key{};
-    int prefix_length{0};
-    V value{};
-    uint32_t version{0};
-
-    static constexpr MatchUnitType mut = MatchUnitType::LPM;
-  };
-
- private:
-  MatchErrorCode add_entry_(const std::vector<MatchKeyParam> &match_key,
-                            V value,  // by value for possible std::move
-                            entry_handle_t *handle,
-                            int priority) override;
-
-  MatchErrorCode delete_entry_(entry_handle_t handle) override;
-
-  MatchErrorCode modify_entry_(entry_handle_t handle, V value) override;
-
-  MatchErrorCode get_value_(entry_handle_t handle, const V **value) override;
-
-  MatchErrorCode get_entry_(entry_handle_t handle,
-                            std::vector<MatchKeyParam> *match_key,
-                            const V **value, int *priority) const override;
-
-  MatchErrorCode dump_match_entry_(std::ostream *out,
-                                   entry_handle_t handle) const override;
-
-  void dump_(std::ostream *stream) const override;
-
-  void reset_state_() override;
-
-  MatchUnitLookup lookup_key(const ByteContainer &key) const override;
-
- private:
-  std::vector<Entry> entries{};
-  LPMTrie entries_trie;
-};
+using MatchUnitExact = MatchUnit<V, ExactEntry>;
 
 template <typename V>
-class MatchUnitTernary : public MatchUnitAbstract<V> {
- public:
-  typedef typename MatchUnitAbstract<V>::MatchUnitLookup MatchUnitLookup;
+using MatchUnitLPM = MatchUnit<V, LPMEntry>;
 
- public:
-  MatchUnitTernary(size_t size, const MatchKeyBuilder &match_key_builder)
-    : MatchUnitAbstract<V>(size, match_key_builder),
-      entries(size) { }
+template <typename V>
+using MatchUnitTernary = MatchUnit<V, TernaryEntry>;
 
- private:
-  struct Entry {
-    Entry() { }
-
-    Entry(ByteContainer key, ByteContainer mask, int priority, V value,
-          uint32_t version)
-      : key(std::move(key)), mask(std::move(mask)), priority(priority),
-        value(std::move(value)), version(version) { }
-
-    ByteContainer key{};
-    ByteContainer mask{};
-    int priority{0};
-    V value{};
-    uint32_t version{0};
-
-    static constexpr MatchUnitType mut = MatchUnitType::TERNARY;
-  };
-
- private:
-  MatchErrorCode add_entry_(const std::vector<MatchKeyParam> &match_key,
-                            V value,  // by value for possible std::move
-                            entry_handle_t *handle,
-                            int priority) override;
-
-  MatchErrorCode delete_entry_(entry_handle_t handle) override;
-
-  MatchErrorCode modify_entry_(entry_handle_t handle, V value) override;
-
-  MatchErrorCode get_value_(entry_handle_t handle, const V **value) override;
-
-  MatchErrorCode get_entry_(entry_handle_t handle,
-                            std::vector<MatchKeyParam> *match_key,
-                            const V **value, int *priority) const override;
-
-  MatchErrorCode dump_match_entry_(std::ostream *out,
-                                   entry_handle_t handle) const override;
-
-  void dump_(std::ostream *stream) const override;
-
-  void reset_state_() override;
-
-  MatchUnitLookup lookup_key(const ByteContainer &key) const override;
-
-  bool has_rule(const ByteContainer &key, const ByteContainer &mask,
-                int priority) const;
-
- private:
-  std::vector<Entry> entries{};
-};
 
 }  // namespace bm
 
