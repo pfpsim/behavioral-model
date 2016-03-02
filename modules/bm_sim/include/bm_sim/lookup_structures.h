@@ -109,6 +109,65 @@ class LPMTrie : public LookupStructureInterface<Entry> {
 
 };
 
+template <typename Entry,
+          typename std::enable_if<Entry::mut == MatchUnitType::EXACT, int>::type = 0>
+class ExactMap : public LookupStructureInterface<Entry> {
+  public:
+    virtual bool lookup(const ByteContainer & key,
+        internal_handle_t * handle) override{
+      (void) key;
+      (void) handle;
+      return true;
+    }
+
+    virtual bool entry_exists(const Entry & entry) override{
+      (void) entry;
+      return true;
+    }
+
+    virtual void store_entry(const Entry & entry,
+        internal_handle_t handle) override{
+      (void) entry;
+      (void) handle;
+    }
+
+    virtual void delete_entry(const Entry & entry) override{
+      (void) entry;
+    }
+
+    virtual void clear() override{
+    }
+};
+
+template <typename Entry,
+          typename std::enable_if<Entry::mut == MatchUnitType::TERNARY, int>::type = 0>
+class TernaryMap : public LookupStructureInterface<Entry> {
+  public:
+    virtual bool lookup(const ByteContainer & key,
+        internal_handle_t * handle) override{
+      (void) key;
+      (void) handle;
+      return true;
+    }
+
+    virtual bool entry_exists(const Entry & entry) override{
+      (void) entry;
+      return true;
+    }
+
+    virtual void store_entry(const Entry & entry,
+        internal_handle_t handle) override{
+      (void) entry;
+      (void) handle;
+    }
+
+    virtual void delete_entry(const Entry & entry) override{
+      (void) entry;
+    }
+
+    virtual void clear() override{
+    }
+};
 
 
 } // namespace bm
