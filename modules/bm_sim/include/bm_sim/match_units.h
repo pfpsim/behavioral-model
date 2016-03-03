@@ -30,6 +30,7 @@
 #include <iostream>
 #include <atomic>
 #include <utility>  // for pair<>
+#include <memory>
 
 #include "match_unit_types.h"
 #include "match_error_codes.h"
@@ -431,19 +432,19 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
   ENABLE_IF(LPM)
   MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder)
     : MatchUnitAbstract<V>(size, match_key_builder),
-      entries(size), lookupStructure{LPMTrie<Entry>(32)} // TODO(gordon) this is temporary
+      entries(size), lookupStructure{new LPMTrie<Entry>(32)} // TODO(gordon) this is temporary
   { }
 
   ENABLE_IF(EXACT)
   MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder)
     : MatchUnitAbstract<V>(size, match_key_builder),
-      entries(size), lookupStructure{ExactMap<Entry>()} // TODO(gordon) this is temporary
+      entries(size), lookupStructure{new ExactMap<Entry>()} // TODO(gordon) this is temporary
   { }
 
   ENABLE_IF(TERNARY)
   MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder)
     : MatchUnitAbstract<V>(size, match_key_builder),
-      entries(size), lookupStructure{TernaryMap<Entry>()} // TODO(gordon) this is temporary
+      entries(size), lookupStructure{new TernaryMap<Entry>()} // TODO(gordon) this is temporary
   { }
 
 #undef ENABLE_IF
@@ -475,7 +476,7 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
 
  private:
   std::vector<Entry> entries{};
-  LookupStructure & lookupStructure; // TODO maybe smart pointer instead?
+  std::unique_ptr<LookupStructure> lookupStructure; // TODO maybe smart pointer instead?
 };
 
 // Alias all of our concrete MatchUnit types for convenience

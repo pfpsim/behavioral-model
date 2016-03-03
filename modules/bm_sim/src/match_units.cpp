@@ -795,7 +795,7 @@ template <typename V, template <typename EV=V> class E>
 typename MatchUnitGeneric<V,E>::MatchUnitLookup
 MatchUnitGeneric<V,E>::lookup_key(const ByteContainer &key) const {
   internal_handle_t handle_;
-  bool entry_found = lookupStructure.lookup(key, &handle_);
+  bool entry_found = lookupStructure->lookup(key, &handle_);
   if (entry_found) {
     const Entry &entry = entries[handle_];
     entry_handle_t handle = HANDLE_SET(entry.version, handle_);
@@ -826,7 +826,7 @@ MatchUnitGeneric<V,E>::add_entry_(const std::vector<MatchKeyParam> &match_key,
 
   // check if the key is already present
   set_priority(entry, priority); // For Ternary
-  if (lookupStructure.entry_exists(entry))
+  if (lookupStructure->entry_exists(entry))
     return MatchErrorCode::DUPLICATE_ENTRY;
 
   internal_handle_t handle_;
@@ -837,7 +837,7 @@ MatchUnitGeneric<V,E>::add_entry_(const std::vector<MatchKeyParam> &match_key,
   *handle = HANDLE_SET(version, handle_);
 
   // key is copied, which is not great
-  lookupStructure.store_entry(entry, handle_);
+  lookupStructure->store_entry(entry, handle_);
   entry.value = std::move(value);
   entry.version = version;
   entries[handle_] = std::move(entry);
@@ -854,7 +854,7 @@ MatchUnitGeneric<V,E>::delete_entry_(entry_handle_t handle) {
   if (HANDLE_VERSION(handle) != entry.version)
     return MatchErrorCode::EXPIRED_HANDLE;
   entry.version += 1;
-  lookupStructure.delete_entry(entry);
+  lookupStructure->delete_entry(entry);
 
   return this->unset_handle(handle_);
 }
@@ -948,7 +948,7 @@ template <typename V, template <typename EV=V> class E>
 void
 MatchUnitGeneric<V,E>::reset_state_() {
   entries = std::vector<Entry>(this->size);
-  lookupStructure.clear();
+  lookupStructure->clear();
 }
 
 // explicit template instantiation
