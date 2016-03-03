@@ -13,9 +13,6 @@ namespace bm {
 static_assert(sizeof(value_t) == sizeof(internal_handle_t),
               "Invalid type sizes");
 
-// We don't need or want to export these classes outside of this
-// compilation unit.
-namespace /*anonymous*/ {
 template <typename V>
 class LPMTrie : public LookupStructure<V, LPMEntry> {
   public:
@@ -165,27 +162,6 @@ class TernaryMap : public LookupStructure<V, TernaryEntry> {
     }
 };
 
-} // anonymous namespace
-
-// We'll use a macro to avoid lengthy and repetitive specialization of
-// all of these templates, since we can't partially specialize
-#define LOOKUP_STRUCTURE_FACTORY_CREATE_1V(v, e, lookup_structure, args) \
-  template <> \
-  LookupStructure<v, e> * \
-  LookupStructureFactory::create<v, e>() { \
-    return new lookup_structure<v>args; \
-  }
-
-#define LOOKUP_STRUCTURE_FACTORY_CREATE(e, lookup_structure, args) \
-  LOOKUP_STRUCTURE_FACTORY_CREATE_1V(MatchTableAbstract::ActionEntry,   e, lookup_structure, args) \
-  LOOKUP_STRUCTURE_FACTORY_CREATE_1V(MatchTableIndirect::IndirectIndex, e, lookup_structure, args)
-
-LOOKUP_STRUCTURE_FACTORY_CREATE(ExactEntry, ExactMap, (500))
-LOOKUP_STRUCTURE_FACTORY_CREATE(LPMEntry, LPMTrie, (32))
-LOOKUP_STRUCTURE_FACTORY_CREATE(TernaryEntry, TernaryMap, ())
-
-#undef LOOKUP_STRUCTURE_FACTORY_CREATE
-#undef LOOKUP_STRUCTURE_FACTORY_CREATE_1V
 
 
 } // namespace bm

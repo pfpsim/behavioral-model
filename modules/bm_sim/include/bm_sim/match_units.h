@@ -38,7 +38,7 @@
 #include "phv.h"
 #include "packet.h"
 #include "handle_mgr.h"
-#include "lookup_structures.h"
+#include "lookup_structures_interfaces.h"
 #include "counters.h"
 #include "meters.h"
 
@@ -425,10 +425,13 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
   typedef E<> Entry;
 
  public:
-  MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder)
+  MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder,
+      LookupStructureFactoryPart<V,E> & lookup_factory)
     : MatchUnitAbstract<V>(size, match_key_builder),
-      entries(size), lookupStructure(lookupFactory.create<V, E>()) // TODO(gordon) this is temporary
-  { }
+      entries(size)
+  {
+    lookup_factory.create(lookupStructure);
+  }
 
  private:
   MatchErrorCode add_entry_(const std::vector<MatchKeyParam> &match_key,
@@ -457,7 +460,6 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
 
  private:
   std::vector<Entry> entries{};
-  LookupStructureFactory lookupFactory;
   std::unique_ptr<LookupStructure<V,E>> lookupStructure;
 };
 
