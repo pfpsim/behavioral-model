@@ -35,7 +35,7 @@ class LookupStructureInterface {
 
     //! Store an entry in the lookup structure. Associates the given handle
     //! with the given entry.
-    virtual void store_entry(const Entry & entry, internal_handle_t handle);
+    virtual void store_entry(const Entry & entry, internal_handle_t handle) = 0;
 
     //! Remove a given entry from the structure. Has no effect if the entry
     //! does not exist.
@@ -122,7 +122,7 @@ class ExactMap : public LookupStructureInterface<Entry> {
 
     virtual bool entry_exists(const Entry & entry) override{
       (void) entry;
-      return true;
+      return false;
     }
 
     virtual void store_entry(const Entry & entry,
@@ -152,7 +152,7 @@ class TernaryMap : public LookupStructureInterface<Entry> {
 
     virtual bool entry_exists(const Entry & entry) override{
       (void) entry;
-      return true;
+      return false;
     }
 
     virtual void store_entry(const Entry & entry,
