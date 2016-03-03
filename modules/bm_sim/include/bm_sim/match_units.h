@@ -423,31 +423,12 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
  public:
   typedef typename MatchUnitAbstract<V>::MatchUnitLookup MatchUnitLookup;
   typedef E<> Entry;
-  typedef LookupStructureInterface<Entry> LookupStructure;
 
  public:
-#define ENABLE_IF(ENABLE_IF_TYPE) template <class Enable=Entry, typename \
-    std::enable_if<Enable::mut == MatchUnitType::ENABLE_IF_TYPE, int>::type = 0>
-
-  ENABLE_IF(LPM)
   MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder)
     : MatchUnitAbstract<V>(size, match_key_builder),
-      entries(size), lookupStructure{new LPMTrie<Entry>(32)} // TODO(gordon) this is temporary
+      entries(size), lookupStructure(lookupFactory.create<V, E>()) // TODO(gordon) this is temporary
   { }
-
-  ENABLE_IF(EXACT)
-  MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder)
-    : MatchUnitAbstract<V>(size, match_key_builder),
-      entries(size), lookupStructure{new ExactMap<Entry>()} // TODO(gordon) this is temporary
-  { }
-
-  ENABLE_IF(TERNARY)
-  MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder)
-    : MatchUnitAbstract<V>(size, match_key_builder),
-      entries(size), lookupStructure{new TernaryMap<Entry>()} // TODO(gordon) this is temporary
-  { }
-
-#undef ENABLE_IF
 
  private:
   MatchErrorCode add_entry_(const std::vector<MatchKeyParam> &match_key,
@@ -476,7 +457,8 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
 
  private:
   std::vector<Entry> entries{};
-  std::unique_ptr<LookupStructure> lookupStructure; // TODO maybe smart pointer instead?
+  LookupStructureFactory lookupFactory;
+  std::unique_ptr<LookupStructure<V,E>> lookupStructure;
 };
 
 // Alias all of our concrete MatchUnit types for convenience

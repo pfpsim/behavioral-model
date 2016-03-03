@@ -29,6 +29,7 @@ src/extern.cpp \
 src/fields.cpp \
 src/headers.cpp \
 src/learning.cpp \
+src/lookup_structures.cpp \
 src/logger.cpp \
 src/match_units.cpp \
 src/match_tables.cpp \
@@ -75,7 +76,7 @@ include/bm_sim/handle_mgr.h \
 include/bm_sim/headers.h \
 include/bm_sim/learning.h \
 include/bm_sim/logger.h \
-include/bm_sim/lpm_trie.h \
+include/bm_sim/lookup_structures.h \
 include/bm_sim/meters.h \
 include/bm_sim/named_p4object.h \
 include/bm_sim/nn.h \
