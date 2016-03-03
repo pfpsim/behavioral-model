@@ -83,33 +83,57 @@ class ExactMap : public LookupStructure<V, ExactEntry> {
   public:
     typedef ExactEntry<V> Entry;
 
+    ExactMap(size_t size){
+      entries_map.reserve(size);
+    }
+
     virtual bool lookup(const ByteContainer & key,
         internal_handle_t * handle) override{
-      (void) key;
-      (void) handle;
-      return true;
+      const auto entry_it = entries_map.find(key);
+      if (entry_it == entries_map.end()) {
+        return false; // Nothing found
+      }else{
+        *handle = entry_it->second; // TODO handle is internal_handle_t,
+                                    // entry_it->second is entry_handle_t .....
+        return true;
+      }
     }
 
     virtual bool entry_exists(const Entry & entry) override{
       (void) entry;
-      return false;
+      return entries_map.find(entry.key) != entries_map.end();
     }
 
     virtual void store_entry(const Entry & entry,
         internal_handle_t handle) override{
-      (void) entry;
-      (void) handle;
+      // TODO same thing, I think the type of entries_map is wrong ...
+      entries_map[entry.key] = handle;  // key is copied, which is not great
     }
 
     virtual void delete_entry(const Entry & entry) override{
-      (void) entry;
+      entries_map.erase(entry.key);
     }
 
     virtual void clear() override{
+      entries_map.clear();
     }
+  private:
+    // TODO should be internal_handle_t I think .. ?
+    std::unordered_map<ByteContainer, entry_handle_t, ByteContainerKeyHash>
+      entries_map{};
 };
 
 // TODO
+// uuuuuuuuuuuuugh ok so we will have to do a little bit of redundant
+// storage of some stuff.
+//
+// ok but already LPM and Exact are storing handles two places...
+// but they're not duplicating the keys and stuff...
+//
+// but we need this to be completely seperated to be able to model it....
+//
+// blargh
+//
 template <typename V>
 class TernaryMap : public LookupStructure<V, TernaryEntry> {
   public:
@@ -156,7 +180,7 @@ class TernaryMap : public LookupStructure<V, TernaryEntry> {
   LOOKUP_STRUCTURE_FACTORY_CREATE_1V(MatchTableAbstract::ActionEntry,   e, lookup_structure, args) \
   LOOKUP_STRUCTURE_FACTORY_CREATE_1V(MatchTableIndirect::IndirectIndex, e, lookup_structure, args)
 
-LOOKUP_STRUCTURE_FACTORY_CREATE(ExactEntry, ExactMap, ())
+LOOKUP_STRUCTURE_FACTORY_CREATE(ExactEntry, ExactMap, (500))
 LOOKUP_STRUCTURE_FACTORY_CREATE(LPMEntry, LPMTrie, (32))
 LOOKUP_STRUCTURE_FACTORY_CREATE(TernaryEntry, TernaryMap, ())
 
