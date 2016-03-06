@@ -296,11 +296,11 @@ format_ternary_key(ByteContainer *key, const ByteContainer &mask) {
 
 class MatchKeyBuilderHelper {
  public:
-  template <typename E,
-            typename std::enable_if<E::mut == MatchUnitType::EXACT, int>::type
+  template <typename K,
+            typename std::enable_if<K::mut == MatchUnitType::EXACT, int>::type
             = 0>
   static std::vector<MatchKeyParam>
-  entry_to_match_params(const MatchKeyBuilder &kb, const E &entry) {
+  entry_to_match_params(const MatchKeyBuilder &kb, const K & key) {
     std::vector<MatchKeyParam> params;
 
     size_t nfields = kb.key_mapping.size();
@@ -309,7 +309,7 @@ class MatchKeyBuilderHelper {
       const auto &f_info = kb.key_input.at(imp_idx);
       const size_t byte_offset = kb.key_offsets.at(i);
 
-      auto start = entry.key.begin() + byte_offset;
+      auto start = key.data.begin() + byte_offset;
       auto end = start + nbits_to_nbytes(f_info.nbits);
       assert(f_info.mtype == MatchKeyParam::Type::VALID ||
              f_info.mtype == MatchKeyParam::Type::EXACT);
@@ -319,14 +319,14 @@ class MatchKeyBuilderHelper {
     return params;
   }
 
-  template <typename E,
-            typename std::enable_if<E::mut == MatchUnitType::LPM, int>::type
+  template <typename K,
+            typename std::enable_if<K::mut == MatchUnitType::LPM, int>::type
             = 0>
   static std::vector<MatchKeyParam>
-  entry_to_match_params(const MatchKeyBuilder &kb, const E &entry) {
+  entry_to_match_params(const MatchKeyBuilder &kb, const K &key) {
     std::vector<MatchKeyParam> params;
     size_t LPM_idx = 0;
-    int pref = entry.prefix_length;
+    int pref = key.prefix_length;
 
     size_t nfields = kb.key_mapping.size();
     for (size_t i = 0; i < nfields; i++) {
@@ -334,7 +334,7 @@ class MatchKeyBuilderHelper {
       const auto &f_info = kb.key_input.at(imp_idx);
       const size_t byte_offset = kb.key_offsets.at(i);
 
-      auto start = entry.key.begin() + byte_offset;
+      auto start = key.data.begin() + byte_offset;
       auto end = start + nbits_to_nbytes(f_info.nbits);
       assert(f_info.mtype != MatchKeyParam::Type::TERNARY);
 
@@ -353,11 +353,11 @@ class MatchKeyBuilderHelper {
     return params;
   }
 
-  template <typename E,
-            typename std::enable_if<E::mut == MatchUnitType::TERNARY, int>::type
+  template <typename K,
+            typename std::enable_if<K::mut == MatchUnitType::TERNARY, int>::type
             = 0>
   static std::vector<MatchKeyParam>
-  entry_to_match_params(const MatchKeyBuilder &kb, const E &entry) {
+  entry_to_match_params(const MatchKeyBuilder &kb, const K & key) {
     std::vector<MatchKeyParam> params;
 
     size_t nfields = kb.key_mapping.size();
@@ -366,7 +366,7 @@ class MatchKeyBuilderHelper {
       const auto &f_info = kb.key_input.at(imp_idx);
       const size_t byte_offset = kb.key_offsets.at(i);
 
-      auto start = entry.key.begin() + byte_offset;
+      auto start = key.data.begin() + byte_offset;
       size_t nbytes = nbits_to_nbytes(f_info.nbits);
       auto end = start + nbytes;
       switch (f_info.mtype) {
@@ -376,7 +376,7 @@ class MatchKeyBuilderHelper {
           break;
         case MatchKeyParam::Type::TERNARY:
           {
-            auto mask_start = entry.mask.begin() + byte_offset;
+            auto mask_start = key.mask.begin() + byte_offset;
             auto mask_end = mask_start + nbytes;
             params.emplace_back(f_info.mtype, std::string(start, end),
                                 std::string(mask_start, mask_end));
@@ -384,7 +384,7 @@ class MatchKeyBuilderHelper {
           }
         case MatchKeyParam::Type::LPM:
           {
-            auto mask_start = entry.mask.begin() + byte_offset;
+            auto mask_start = key.mask.begin() + byte_offset;
             auto mask_end = mask_start + nbytes;
             params.emplace_back(f_info.mtype, std::string(start, end),
                                 pref_len_from_mask(mask_start, mask_end));
@@ -397,42 +397,42 @@ class MatchKeyBuilderHelper {
   }
 
   template <typename E,
-            typename std::enable_if<E::mut == MatchUnitType::EXACT, int>::type
+            typename std::enable_if<decltype(E::key)::mut == MatchUnitType::EXACT, int>::type
             = 0>
   static E
   match_params_to_entry(const MatchKeyBuilder &kb,
                         const std::vector<MatchKeyParam> &params) {
     E entry;
-    entry.key.reserve(kb.nbytes_key);
+    entry.key.data.reserve(kb.nbytes_key);
 
     for (const auto i : kb.inv_mapping)
-      entry.key.append(params.at(i).key);
+      entry.key.data.append(params.at(i).key);
 
     return entry;
   }
 
   template <typename E,
-            typename std::enable_if<E::mut == MatchUnitType::LPM, int>::type
+            typename std::enable_if<decltype(E::key)::mut == MatchUnitType::LPM, int>::type
             = 0>
   static E
   match_params_to_entry(const MatchKeyBuilder &kb,
                         const std::vector<MatchKeyParam> &params) {
     E entry;
-    entry.key.reserve(kb.nbytes_key);
-    entry.prefix_length = 0;
+    entry.key.data.reserve(kb.nbytes_key);
+    entry.key.prefix_length = 0;
 
     for (const auto i : kb.inv_mapping) {
       const auto &param = params.at(i);
-      entry.key.append(param.key);
+      entry.key.data.append(param.key);
       switch (param.type) {
         case MatchKeyParam::Type::VALID:
-          entry.prefix_length += 8;
+          entry.key.prefix_length += 8;
           break;
         case MatchKeyParam::Type::EXACT:
-          entry.prefix_length += param.key.size() << 3;
+          entry.key.prefix_length += param.key.size() << 3;
           break;
         case MatchKeyParam::Type::LPM:
-          entry.prefix_length += param.prefix_length;
+          entry.key.prefix_length += param.prefix_length;
           break;
         case MatchKeyParam::Type::TERNARY:
           assert(0);
@@ -443,36 +443,36 @@ class MatchKeyBuilderHelper {
   }
 
   template <typename E,
-            typename std::enable_if<E::mut == MatchUnitType::TERNARY, int>::type
+            typename std::enable_if<decltype(E::key)::mut == MatchUnitType::TERNARY, int>::type
             = 0>
   static E
   match_params_to_entry(const MatchKeyBuilder &kb,
                         const std::vector<MatchKeyParam> &params) {
     E entry;
-    entry.key.reserve(kb.nbytes_key);
-    entry.mask.reserve(kb.nbytes_key);
+    entry.key.data.reserve(kb.nbytes_key);
+    entry.key.mask.reserve(kb.nbytes_key);
 
     for (const auto i : kb.inv_mapping) {
       const auto &param = params.at(i);
-      entry.key.append(param.key);
+      entry.key.data.append(param.key);
       switch (param.type) {
         case MatchKeyParam::Type::VALID:
-          entry.mask.append("\xff");
+          entry.key.mask.append("\xff");
           break;
         case MatchKeyParam::Type::EXACT:
-          entry.mask.append(std::string(param.key.size(), '\xff'));
+          entry.key.mask.append(std::string(param.key.size(), '\xff'));
           break;
         case MatchKeyParam::Type::LPM:
-          entry.mask.append(
+          entry.key.mask.append(
               create_mask_from_pref_len(param.prefix_length, param.key.size()));
           break;
         case MatchKeyParam::Type::TERNARY:
-          entry.mask.append(param.mask);
+          entry.key.mask.append(param.mask);
           break;
       }
     }
 
-    format_ternary_key(&entry.key, entry.mask);
+    format_ternary_key(&entry.key.data, entry.key.mask);
 
     return entry;
   }
@@ -759,16 +759,16 @@ MatchUnitAbstract<V>::reset_state() {
 
 
 namespace {
-  // Utility to transparently either get the real priority value from a ternary entry
-  // or simply return -1 for other types of entries
+  // Utility to transparently either get the real priority value from a
+  // ternary entry or simply return -1 for other types of entries
 
   template <typename T,
-            typename std::enable_if<T::mut == MatchUnitType::TERNARY, int>::type = 0>
+    typename std::enable_if<T::mut == MatchUnitType::TERNARY, int>::type = 0>
   int get_priority(const T & entry){
     return entry.priority;
   }
   template <typename T,
-            typename std::enable_if<T::mut != MatchUnitType::TERNARY, int>::type = 0>
+    typename std::enable_if<T::mut != MatchUnitType::TERNARY, int>::type = 0>
   int get_priority(const T & entry){
     (void) entry; // dodge unused param error
     return -1;
@@ -777,12 +777,12 @@ namespace {
   // Matching setter utility
 
   template <typename T,
-            typename std::enable_if<T::mut == MatchUnitType::TERNARY, int>::type = 0>
+    typename std::enable_if<T::mut == MatchUnitType::TERNARY, int>::type = 0>
   void set_priority(T & entry, int p){
     entry.priority = p;
   }
   template <typename T,
-            typename std::enable_if<T::mut != MatchUnitType::TERNARY, int>::type = 0>
+    typename std::enable_if<T::mut != MatchUnitType::TERNARY, int>::type = 0>
   void set_priority(T & entry, int p){
     (void) entry; // dodge unused param error
     (void) p;
@@ -791,22 +791,22 @@ namespace {
 } // anonymous namespace
 
 
-template <typename V, template <typename EV=V> class E>
-typename MatchUnitGeneric<V,E>::MatchUnitLookup
-MatchUnitGeneric<V,E>::lookup_key(const ByteContainer &key) const {
+template <typename K, typename V>
+typename MatchUnitGeneric<K,V>::MatchUnitLookup
+MatchUnitGeneric<K,V>::lookup_key(const ByteContainer &key) const {
   internal_handle_t handle_;
   bool entry_found = lookupStructure->lookup(key, &handle_);
   if (entry_found) {
     const Entry &entry = entries[handle_];
-    entry_handle_t handle = HANDLE_SET(entry.version, handle_);
+    entry_handle_t handle = HANDLE_SET(entry.key.version, handle_);
     return MatchUnitLookup(handle, &entry.value);
   }
   return MatchUnitLookup::empty_entry();
 }
 
-template <typename V, template <typename EV=V> class E>
+template <typename K, typename V>
 MatchErrorCode
-MatchUnitGeneric<V,E>::add_entry_(const std::vector<MatchKeyParam> &match_key,
+MatchUnitGeneric<K,V>::add_entry_(const std::vector<MatchKeyParam> &match_key,
                             V value, entry_handle_t *handle, int priority) {
   const auto &KeyB = this->match_key_builder;
 
@@ -822,113 +822,113 @@ MatchUnitGeneric<V,E>::add_entry_(const std::vector<MatchKeyParam> &match_key,
   // the hash map.
   // TODO(antonin): maybe change this by modifying delete_entry method
   // TODO(antonin): does this really make sense for a Ternary/LPM table?
-  KeyB.apply_big_mask(&entry.key);
+  KeyB.apply_big_mask(&entry.key.data);
 
   // check if the key is already present
-  set_priority(entry, priority); // For Ternary
-  if (lookupStructure->entry_exists(entry))
+  set_priority(entry.key, priority); // For Ternary
+  if (lookupStructure->entry_exists(entry.key))
     return MatchErrorCode::DUPLICATE_ENTRY;
 
   internal_handle_t handle_;
   MatchErrorCode status = this->get_and_set_handle(&handle_);
   if (status != MatchErrorCode::SUCCESS) return status;
 
-  uint32_t version = entries[handle_].version;
+  uint32_t version = entries[handle_].key.version;
   *handle = HANDLE_SET(version, handle_);
 
   // key is copied, which is not great
-  lookupStructure->store_entry(entry, handle_);
+  lookupStructure->store_entry(entry.key, handle_);
   entry.value = std::move(value);
-  entry.version = version;
+  entry.key.version = version;
   entries[handle_] = std::move(entry);
 
   return MatchErrorCode::SUCCESS;
 }
 
-template <typename V, template <typename EV=V> class E>
+template <typename K, typename V>
 MatchErrorCode
-MatchUnitGeneric<V,E>::delete_entry_(entry_handle_t handle) {
+MatchUnitGeneric<K,V>::delete_entry_(entry_handle_t handle) {
   internal_handle_t handle_ = HANDLE_INTERNAL(handle);
   if (!this->valid_handle_(handle_)) return MatchErrorCode::INVALID_HANDLE;
   Entry &entry = entries[handle_];
-  if (HANDLE_VERSION(handle) != entry.version)
+  if (HANDLE_VERSION(handle) != entry.key.version)
     return MatchErrorCode::EXPIRED_HANDLE;
-  entry.version += 1;
-  lookupStructure->delete_entry(entry);
+  entry.key.version += 1;
+  lookupStructure->delete_entry(entry.key);
 
   return this->unset_handle(handle_);
 }
 
-template <typename V, template <typename EV=V> class E>
+template <typename K, typename V>
 MatchErrorCode
-MatchUnitGeneric<V,E>::modify_entry_(entry_handle_t handle, V value) {
+MatchUnitGeneric<K,V>::modify_entry_(entry_handle_t handle, V value) {
   internal_handle_t handle_ = HANDLE_INTERNAL(handle);
   if (!this->valid_handle_(handle_)) return MatchErrorCode::INVALID_HANDLE;
   Entry &entry = entries[handle_];
-  if (HANDLE_VERSION(handle) != entry.version)
+  if (HANDLE_VERSION(handle) != entry.key.version)
     return MatchErrorCode::EXPIRED_HANDLE;
   entry.value = std::move(value);
 
   return MatchErrorCode::SUCCESS;
 }
 
-template <typename V, template <typename EV=V> class E>
+template <typename K, typename V>
 MatchErrorCode
-MatchUnitGeneric<V,E>::get_value_(entry_handle_t handle, const V **value) {
+MatchUnitGeneric<K,V>::get_value_(entry_handle_t handle, const V **value) {
   internal_handle_t handle_ = HANDLE_INTERNAL(handle);
   if (!this->valid_handle_(handle_)) return MatchErrorCode::INVALID_HANDLE;
   Entry &entry = entries[handle_];
-  if (HANDLE_VERSION(handle) != entry.version)
+  if (HANDLE_VERSION(handle) != entry.key.version)
     return MatchErrorCode::EXPIRED_HANDLE;
   *value = &entry.value;
 
   return MatchErrorCode::SUCCESS;
 }
 
-template <typename V, template <typename EV=V> class E>
+template <typename K, typename V>
 MatchErrorCode
-MatchUnitGeneric<V,E>::get_entry_(entry_handle_t handle,
+MatchUnitGeneric<K,V>::get_entry_(entry_handle_t handle,
                             std::vector<MatchKeyParam> *match_key,
                             const V **value, int *priority) const {
   internal_handle_t handle_ = HANDLE_INTERNAL(handle);
   if (!this->valid_handle(handle_)) return MatchErrorCode::INVALID_HANDLE;
   const Entry &entry = entries[handle_];
-  if (HANDLE_VERSION(handle) != entry.version)
+  if (HANDLE_VERSION(handle) != entry.key.version)
     return MatchErrorCode::EXPIRED_HANDLE;
 
-  *match_key = this->match_key_builder.entry_to_match_params(entry);
+  *match_key = this->match_key_builder.entry_to_match_params(entry.key);
   *value = &entry.value;
   // TODO(gordon) is this ok for LPM and Exact?
-  if (priority) *priority = get_priority(entry);
+  if (priority) *priority = get_priority(entry.key);
 
   return MatchErrorCode::SUCCESS;
 }
 
-template <typename V, template <typename EV=V> class E>
+template <typename K, typename V>
 MatchErrorCode
-MatchUnitGeneric<V,E>::dump_match_entry_(std::ostream *out,
+MatchUnitGeneric<K,V>::dump_match_entry_(std::ostream *out,
                                    entry_handle_t handle) const {
   internal_handle_t handle_ = HANDLE_INTERNAL(handle);
   const Entry &entry = entries[handle_];
-  if (HANDLE_VERSION(handle) != entry.version)
+  if (HANDLE_VERSION(handle) != entry.key.version)
     return MatchErrorCode::EXPIRED_HANDLE;
 
   // TODO(antonin): avoid duplicate code, this is basically the same as for
   // exact
   *out << "Dumping entry " << handle << "\n";
   this->dump_key_params(
-      out, this->match_key_builder.entry_to_match_params(entry),
-      get_priority(entry));
+      out, this->match_key_builder.entry_to_match_params(entry.key),
+      get_priority(entry.key));
   return MatchErrorCode::SUCCESS;
 }
 
-template <typename V, template <typename EV=V> class E>
+template <typename K, typename V>
 void
-MatchUnitGeneric<V,E>::dump_(std::ostream *stream) const {
+MatchUnitGeneric<K,V>::dump_(std::ostream *stream) const {
   for (internal_handle_t handle_ : this->handles) {
     const Entry &entry = entries[handle_];
-    (*stream) << HANDLE_SET(entry.version, handle_) << ": "
-              << this->match_key_builder.key_to_string(entry.key, " ");
+    (*stream) << HANDLE_SET(entry.key.version, handle_) << ": "
+              << this->match_key_builder.key_to_string(entry.key.data, " ");
     /* XXX  switch(TYPE){
       case LPM:
         (*stream) << " / " << entry.prefix_length;
@@ -944,9 +944,9 @@ MatchUnitGeneric<V,E>::dump_(std::ostream *stream) const {
   }
 }
 
-template <typename V, template <typename EV=V> class E>
+template <typename K, typename V>
 void
-MatchUnitGeneric<V,E>::reset_state_() {
+MatchUnitGeneric<K,V>::reset_state_() {
   entries = std::vector<Entry>(this->size);
   lookupStructure->clear();
 }
@@ -955,18 +955,26 @@ MatchUnitGeneric<V,E>::reset_state_() {
 
 // I did not think I had to explicitly instantiate MatchUnitAbstract, because it
 // is a base class for the others, but I get an linker error if I don't
-template class MatchUnitAbstract<MatchTableAbstract::ActionEntry>;
-template class MatchUnitAbstract<MatchTableIndirect::IndirectIndex>;
+template class
+MatchUnitAbstract<MatchTableAbstract::ActionEntry>;
+template class
+MatchUnitAbstract<MatchTableIndirect::IndirectIndex>;
 
 // The following are all instantiation of MatchUnitGeneric, based on the various
 // aliases created in match_units.h
-template class MatchUnitGeneric<MatchTableAbstract::ActionEntry,   ExactEntry>;
-template class MatchUnitGeneric<MatchTableIndirect::IndirectIndex, ExactEntry>;
+template class
+MatchUnitGeneric<ExactMatchKey, MatchTableAbstract::ActionEntry>;
+template class
+MatchUnitGeneric<ExactMatchKey, MatchTableIndirect::IndirectIndex>;
 
-template class MatchUnitGeneric<MatchTableAbstract::ActionEntry,   LPMEntry>;
-template class MatchUnitGeneric<MatchTableIndirect::IndirectIndex, LPMEntry>;
+template class
+MatchUnitGeneric<LPMMatchKey, MatchTableAbstract::ActionEntry>;
+template class
+MatchUnitGeneric<LPMMatchKey, MatchTableIndirect::IndirectIndex>;
 
-template class MatchUnitGeneric<MatchTableAbstract::ActionEntry,   TernaryEntry>;
-template class MatchUnitGeneric<MatchTableIndirect::IndirectIndex, TernaryEntry>;
+template class
+MatchUnitGeneric<TernaryMatchKey, MatchTableAbstract::ActionEntry>;
+template class
+MatchUnitGeneric<TernaryMatchKey, MatchTableIndirect::IndirectIndex>;
 
 }  // namespace bm

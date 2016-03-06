@@ -13,10 +13,11 @@ namespace bm {
 static_assert(sizeof(value_t) == sizeof(internal_handle_t),
               "Invalid type sizes");
 
-template <typename V>
-class LPMTrie : public LookupStructure<V, LPMEntry> {
+// We don't need or want to export these classes outside of this
+// compilation unit.
+
+class LPMTrie : public LookupStructure<LPMMatchKey> {
   public:
-    typedef LPMEntry<V> Entry;
     explicit LPMTrie(size_t key_width_bytes)
       : key_width_bytes(key_width_bytes) {
         trie = bf_lpm_trie_create(key_width_bytes, true);
@@ -43,24 +44,24 @@ class LPMTrie : public LookupStructure<V, LPMEntry> {
       return *this;
     }
 
-    virtual bool lookup(const ByteContainer & key,
+    virtual bool lookup(const ByteContainer & key_data,
         internal_handle_t * handle) override{
-      return bf_lpm_trie_lookup(trie, key.data(),
+      return bf_lpm_trie_lookup(trie, key_data.data(),
                                 reinterpret_cast<value_t *>(handle));
     }
 
-    virtual bool entry_exists(const Entry & entry) override{
-      return bf_lpm_trie_has_prefix(trie, entry.key.data(), entry.prefix_length);
+    virtual bool entry_exists(const LPMMatchKey & key) override{
+      return bf_lpm_trie_has_prefix(trie, key.data.data(), key.prefix_length);
     }
 
-    virtual void store_entry(const Entry & entry,
+    virtual void store_entry(const LPMMatchKey & key,
         internal_handle_t handle) override{
-      bf_lpm_trie_insert(trie, entry.key.data(), entry.prefix_length,
+      bf_lpm_trie_insert(trie, key.data.data(), key.prefix_length,
           (value_t) handle);
     }
 
-    virtual void delete_entry(const Entry & entry) override{
-      bf_lpm_trie_delete(trie, entry.key.data(), entry.prefix_length);
+    virtual void delete_entry(const LPMMatchKey & key) override{
+      bf_lpm_trie_delete(trie, key.data.data(), key.prefix_length);
     }
 
     virtual void clear() override{
@@ -75,11 +76,8 @@ class LPMTrie : public LookupStructure<V, LPMEntry> {
 };
 
 // TODO
-template <typename V>
-class ExactMap : public LookupStructure<V, ExactEntry> {
+class ExactMap : public LookupStructure<ExactMatchKey> {
   public:
-    typedef ExactEntry<V> Entry;
-
     ExactMap(size_t size){
       entries_map.reserve(size);
     }
@@ -96,19 +94,19 @@ class ExactMap : public LookupStructure<V, ExactEntry> {
       }
     }
 
-    virtual bool entry_exists(const Entry & entry) override{
-      (void) entry;
-      return entries_map.find(entry.key) != entries_map.end();
+    virtual bool entry_exists(const ExactMatchKey & key) override{
+      (void) key;
+      return entries_map.find(key.data) != entries_map.end();
     }
 
-    virtual void store_entry(const Entry & entry,
+    virtual void store_entry(const ExactMatchKey & key,
         internal_handle_t handle) override{
       // TODO same thing, I think the type of entries_map is wrong ...
-      entries_map[entry.key] = handle;  // key is copied, which is not great
+      entries_map[key.data] = handle;  // key is copied, which is not great
     }
 
-    virtual void delete_entry(const Entry & entry) override{
-      entries_map.erase(entry.key);
+    virtual void delete_entry(const ExactMatchKey & key) override{
+      entries_map.erase(key.data);
     }
 
     virtual void clear() override{
@@ -131,37 +129,33 @@ class ExactMap : public LookupStructure<V, ExactEntry> {
 //
 // blargh
 //
-template <typename V>
-class TernaryMap : public LookupStructure<V, TernaryEntry> {
+class TernaryMap : public LookupStructure<TernaryMatchKey> {
   public:
-    typedef TernaryEntry<V> Entry;
-
-    virtual bool lookup(const ByteContainer & key,
+    virtual bool lookup(const ByteContainer & key_data,
         internal_handle_t * handle) override{
-      (void) key;
+      (void) key_data;
       (void) handle;
       return true;
     }
 
-    virtual bool entry_exists(const Entry & entry) override{
-      (void) entry;
+    virtual bool entry_exists(const TernaryMatchKey & key) override{
+      (void) key;
       return false;
     }
 
-    virtual void store_entry(const Entry & entry,
+    virtual void store_entry(const TernaryMatchKey & key,
         internal_handle_t handle) override{
-      (void) entry;
+      (void) key;
       (void) handle;
     }
 
-    virtual void delete_entry(const Entry & entry) override{
-      (void) entry;
+    virtual void delete_entry(const TernaryMatchKey & key) override{
+      (void) key;
     }
 
     virtual void clear() override{
     }
 };
-
 
 
 } // namespace bm

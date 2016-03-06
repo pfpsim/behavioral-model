@@ -372,57 +372,18 @@ class MatchUnitAbstract : public MatchUnitAbstract_ {
   virtual MatchUnitLookup lookup_key(const ByteContainer &key) const = 0;
 };
 
-// Entry types.
 
-template <typename V>
-struct AbstractEntry {
-  AbstractEntry() {}
-  AbstractEntry(ByteContainer key, V value, uint32_t version)
-   : key(std::move(key)), value(std::move(value)), version(version) { }
-
-  ByteContainer key{};
-  V value{};
-  uint32_t version{0};
-};
-
-
-template <typename V>
-struct ExactEntry : public AbstractEntry<V> {
-  using AbstractEntry<V>::AbstractEntry;
-
-  static constexpr MatchUnitType mut = MatchUnitType::EXACT;
-};
-
-template <typename V>
-struct LPMEntry : public AbstractEntry<V> {
- LPMEntry() {}
- LPMEntry(ByteContainer key, int prefix_length, V value, uint32_t version)
-   : AbstractEntry<V>(key, value, version), prefix_length(prefix_length) {}
-
- int prefix_length{0};
-
- static constexpr MatchUnitType mut = MatchUnitType::LPM;
-};
-
-template <typename V>
-struct TernaryEntry : public AbstractEntry<V> {
-  TernaryEntry() { }
-  TernaryEntry(ByteContainer key, ByteContainer mask, int priority, V value,
-        uint32_t version)
-    : AbstractEntry<V>(key, value, version), mask(std::move(mask)),
-      priority(priority) { }
-
-  ByteContainer mask{};
-  int priority{0};
-
-  static constexpr MatchUnitType mut = MatchUnitType::TERNARY;
-};
-
-template <typename V, template <typename EV=V> class E>
+template <typename K, typename V>
 class MatchUnitGeneric : public MatchUnitAbstract<V> {
  public:
   typedef typename MatchUnitAbstract<V>::MatchUnitLookup MatchUnitLookup;
-  typedef E<> Entry;
+  struct Entry {
+    Entry() {}
+    Entry(K key, V value)
+      : key(std::move(key)), value(std::move(value)) {}
+    K key;
+    V value;
+  };
 
  public:
   MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder,
@@ -460,20 +421,20 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
 
  private:
   std::vector<Entry> entries{};
-  std::unique_ptr<LookupStructure<V,E>> lookupStructure;
+  std::unique_ptr<LookupStructure<K>> lookupStructure;
 };
 
 // Alias all of our concrete MatchUnit types for convenience
 // when using them elsewhere.
 
 template <typename V>
-using MatchUnitExact = MatchUnitGeneric<V, ExactEntry>;
+using MatchUnitExact = MatchUnitGeneric<ExactMatchKey, V>;
 
 template <typename V>
-using MatchUnitLPM = MatchUnitGeneric<V, LPMEntry>;
+using MatchUnitLPM = MatchUnitGeneric<LPMMatchKey, V>;
 
 template <typename V>
-using MatchUnitTernary = MatchUnitGeneric<V, TernaryEntry>;
+using MatchUnitTernary = MatchUnitGeneric<TernaryMatchKey, V>;
 
 
 }  // namespace bm
