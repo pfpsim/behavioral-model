@@ -25,25 +25,25 @@ class LookupStructureFactory
               <MatchTableIndirect::IndirectIndex, TernaryEntry>
 {
   public:
-    typedef LookupStructure
-            < MatchTableAbstract::ActionEntry   , ExactEntry   > ExactAction;
-    typedef LookupStructure
-            < MatchTableIndirect::IndirectIndex , ExactEntry   > ExactIndirect;
-    typedef LookupStructure
-            < MatchTableAbstract::ActionEntry   , LPMEntry     > LPMAction;
-    typedef LookupStructure
-            < MatchTableIndirect::IndirectIndex , LPMEntry     > LPMIndirect;
-    typedef LookupStructure
-            < MatchTableAbstract::ActionEntry   , TernaryEntry > TernaryAction;
-    typedef LookupStructure
-            < MatchTableIndirect::IndirectIndex , TernaryEntry > TernaryIndirect;
+    virtual void create ( std::unique_ptr< LookupStructure
+            < MatchTableAbstract::ActionEntry   , ExactEntry   >> & ) override = 0;
+    virtual void create ( std::unique_ptr< LookupStructure
+            < MatchTableIndirect::IndirectIndex , ExactEntry   >> & ) override = 0;
+    virtual void create ( std::unique_ptr< LookupStructure
+            < MatchTableAbstract::ActionEntry   , LPMEntry     >> & ) override = 0;
+    virtual void create ( std::unique_ptr< LookupStructure
+            < MatchTableIndirect::IndirectIndex , LPMEntry     >> & ) override = 0;
+    virtual void create ( std::unique_ptr< LookupStructure
+            < MatchTableAbstract::ActionEntry   , TernaryEntry >> & ) override = 0;
+    virtual void create ( std::unique_ptr< LookupStructure
+            < MatchTableIndirect::IndirectIndex , TernaryEntry >> & ) override = 0;
     // TODO :S
-    virtual void create ( std::unique_ptr<ExactAction>     )  override  = 0;
-    virtual void create ( std::unique_ptr<ExactIndirect>   )  override  = 0;
-    virtual void create ( std::unique_ptr<LPMAction>       )  override  = 0;
-    virtual void create ( std::unique_ptr<LPMIndirect>     )  override  = 0;
-    virtual void create ( std::unique_ptr<TernaryAction>   )  override  = 0;
-    virtual void create ( std::unique_ptr<TernaryIndirect> )  override  = 0;
+    //virtual void create ( std::unique_ptr<ExactAction>     )  override  = 0;
+    //virtual void create ( std::unique_ptr<ExactIndirect>   )  override  = 0;
+    //virtual void create ( std::unique_ptr<LPMAction>       )  override  = 0;
+    //virtual void create ( std::unique_ptr<LPMIndirect>     )  override  = 0;
+    //virtual void create ( std::unique_ptr<TernaryAction>   )  override  = 0;
+    //virtual void create ( std::unique_ptr<TernaryIndirect> )  override  = 0;
 
 };
 
