@@ -1,14 +1,14 @@
 #include <bf_lpm_trie/bf_lpm_trie.h>
 
-#include <type_traits>
 #include <algorithm> // for std::swap
+#include <unordered_map>
 
 #include "bm_sim/lookup_structures.h"
 #include "bm_sim/match_unit_types.h"
-#include "bm_sim/match_units.h"
-#include "bm_sim/match_tables.h"
+
 
 namespace bm {
+namespace { // anonymous
 
 static_assert(sizeof(value_t) == sizeof(internal_handle_t),
               "Invalid type sizes");
@@ -75,7 +75,6 @@ class LPMTrie : public LookupStructure<LPMMatchKey> {
 
 };
 
-// TODO
 class ExactMap : public LookupStructure<ExactMatchKey> {
   public:
     ExactMap(size_t size){
@@ -157,5 +156,18 @@ class TernaryMap : public LookupStructure<TernaryMatchKey> {
     }
 };
 
+} // anonymous namespace
+
+void LookupStructureFactory::create(std::unique_ptr<LookupStructure<ExactMatchKey>> & ls){
+  ls.reset(new ExactMap(100));
+}
+
+void LookupStructureFactory::create(std::unique_ptr<LookupStructure<LPMMatchKey>> & ls){
+  ls.reset(new LPMTrie(8));
+}
+
+void LookupStructureFactory::create(std::unique_ptr<LookupStructure<TernaryMatchKey>> & ls){
+  ls.reset(new TernaryMap());
+}
 
 } // namespace bm

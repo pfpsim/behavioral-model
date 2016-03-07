@@ -24,8 +24,10 @@
 #include <algorithm>  // for std::copy, std::max
 
 #include "bm_sim/match_units.h"
+#include "bm_sim/match_unit_types.h"
 #include "bm_sim/match_tables.h"
 #include "bm_sim/logger.h"
+#include "bm_sim/lookup_structures.h"
 #include "utils.h"
 
 namespace bm {

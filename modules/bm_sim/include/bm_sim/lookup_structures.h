@@ -3,51 +3,9 @@
 
 #include "match_unit_types.h"
 #include "bytecontainer.h"
-#include "lookup_structures_interfaces.h"
-#include "match_tables.h"
 
 namespace bm {
 
-class LookupStructureFactory
-  // Inherits the virtual method to create each type of lookup structure
-  // from each of these base classes
-  : public LookupStructureFactoryPart
-              <MatchTableAbstract::ActionEntry,   ExactEntry>
-  , public LookupStructureFactoryPart
-              <MatchTableIndirect::IndirectIndex, ExactEntry>
-  , public LookupStructureFactoryPart
-              <MatchTableAbstract::ActionEntry,   LPMEntry>
-  , public LookupStructureFactoryPart
-              <MatchTableIndirect::IndirectIndex, LPMEntry>
-  , public LookupStructureFactoryPart
-              <MatchTableAbstract::ActionEntry,   TernaryEntry>
-  , public LookupStructureFactoryPart
-              <MatchTableIndirect::IndirectIndex, TernaryEntry>
-{
-  public:
-    virtual void create ( std::unique_ptr< LookupStructure
-            < MatchTableAbstract::ActionEntry   , ExactEntry   >> & ) override = 0;
-    virtual void create ( std::unique_ptr< LookupStructure
-            < MatchTableIndirect::IndirectIndex , ExactEntry   >> & ) override = 0;
-    virtual void create ( std::unique_ptr< LookupStructure
-            < MatchTableAbstract::ActionEntry   , LPMEntry     >> & ) override = 0;
-    virtual void create ( std::unique_ptr< LookupStructure
-            < MatchTableIndirect::IndirectIndex , LPMEntry     >> & ) override = 0;
-    virtual void create ( std::unique_ptr< LookupStructure
-            < MatchTableAbstract::ActionEntry   , TernaryEntry >> & ) override = 0;
-    virtual void create ( std::unique_ptr< LookupStructure
-            < MatchTableIndirect::IndirectIndex , TernaryEntry >> & ) override = 0;
-    // TODO :S
-    //virtual void create ( std::unique_ptr<ExactAction>     )  override  = 0;
-    //virtual void create ( std::unique_ptr<ExactIndirect>   )  override  = 0;
-    //virtual void create ( std::unique_ptr<LPMAction>       )  override  = 0;
-    //virtual void create ( std::unique_ptr<LPMIndirect>     )  override  = 0;
-    //virtual void create ( std::unique_ptr<TernaryAction>   )  override  = 0;
-    //virtual void create ( std::unique_ptr<TernaryIndirect> )  override  = 0;
-
-};
-
-// end clearly horrible
 //! This class defines an interface for all data structures used
 //! in Match Units to perform lookups. Custom data strucures can
 //! be created by implementing this interface, and creating a
@@ -80,6 +38,28 @@ class LookupStructure {
     //! Completely remove all entries from the data structure.
     virtual void clear() = 0;
 
+};
+
+template <class K>
+class LookupStructureFactoryPart {
+  public:
+    virtual void create( std::unique_ptr<LookupStructure<K>> & ptr ) = 0;
+};
+
+class LookupStructureFactory
+  // Inherits the virtual method to create each type of lookup structure
+  // from each of these base classes
+  : public LookupStructureFactoryPart<ExactMatchKey>
+  , public LookupStructureFactoryPart<LPMMatchKey>
+  , public LookupStructureFactoryPart<TernaryMatchKey>
+{
+  public:
+    virtual void create
+      (std::unique_ptr< LookupStructure<ExactMatchKey>> & ) override;
+    virtual void create
+      (std::unique_ptr< LookupStructure<LPMMatchKey>> & ) override;
+    virtual void create
+      (std::unique_ptr< LookupStructure<TernaryMatchKey>> & ) override;
 };
 
 

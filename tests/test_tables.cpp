@@ -64,6 +64,8 @@ struct match_type_test<MUTernary> {
   static constexpr MatchKeyParam::Type type = MatchKeyParam::Type::TERNARY;
 };
 
+LookupStructureFactory lookup_factory;
+
 }  // namespace
 
 template <typename MUType>
@@ -105,14 +107,14 @@ class TableSizeTwo : public ::testing::Test {
     std::unique_ptr<MUType> match_unit;
 
     // true enables counters
-    match_unit = std::unique_ptr<MUType>(new MUType(t_size, key_builder));
+    match_unit = std::unique_ptr<MUType>(new MUType(t_size, key_builder, lookup_factory));
     table = std::unique_ptr<MatchTable>(
       new MatchTable("test_table", 0, std::move(match_unit), true)
     );
     table->set_next_node(0, nullptr);
     table->set_next_node_miss_default(&node_miss_default);
 
-    match_unit = std::unique_ptr<MUType>(new MUType(t_size, key_builder_w_valid));
+    match_unit = std::unique_ptr<MUType>(new MUType(t_size, key_builder_w_valid, lookup_factory));
     table_w_valid = std::unique_ptr<MatchTable>(
       new MatchTable("test_table", 0, std::move(match_unit))
     );
@@ -639,6 +641,7 @@ class TableIndirect : public ::testing::Test {
     // with counters, without ageing
     table = MatchTableIndirect::create("exact", "test_table", 0,
 				       table_size, key_builder,
+               lookup_factory,
 				       true, false);
     table->set_next_node(0, nullptr);
     table->set_next_node_miss_default(&node_miss_default);
@@ -991,6 +994,7 @@ class TableIndirectWS : public ::testing::Test {
     // with counters, without ageing
     table = MatchTableIndirectWS::create("exact", "test_table", 0,
 					 table_size, key_builder,
+           lookup_factory,
 					 true, false);
     table->set_next_node(0, nullptr);
 
@@ -1252,7 +1256,7 @@ class TableBigMask : public ::testing::Test {
     std::unique_ptr<MUType> match_unit;
 
     // false: no counters
-    match_unit = std::unique_ptr<MUType>(new MUType(2, key_builder));
+    match_unit = std::unique_ptr<MUType>(new MUType(2, key_builder, lookup_factory));
     table = std::unique_ptr<MatchTable>(
       new MatchTable("test_table", 0, std::move(match_unit), false)
     );
@@ -1539,7 +1543,7 @@ class AdvancedLPMTest : public AdvancedTest {
     key_builder.push_back_valid_header(testHeader3);
 
     std::unique_ptr<MULPM> match_unit;
-    match_unit = std::unique_ptr<MULPM>(new MULPM(t_size, key_builder));
+    match_unit = std::unique_ptr<MULPM>(new MULPM(t_size, key_builder, lookup_factory));
     table = std::unique_ptr<MatchTable>(
       new MatchTable("test_table", 0, std::move(match_unit), false)
     );
@@ -1623,7 +1627,7 @@ class AdvancedTernaryTest : public AdvancedTest {
     key_builder.push_back_valid_header(testHeader3);
 
     std::unique_ptr<MUTernary> match_unit;
-    match_unit = std::unique_ptr<MUTernary>(new MUTernary(t_size, key_builder));
+    match_unit = std::unique_ptr<MUTernary>(new MUTernary(t_size, key_builder, lookup_factory));
     table = std::unique_ptr<MatchTable>(
       new MatchTable("test_table", 0, std::move(match_unit), false)
     );
@@ -1703,7 +1707,7 @@ class TableEntryDebug : public ::testing::Test {
     set_key_builder();
 
     // true enables counters
-    match_unit = std::unique_ptr<MUType>(new MUType(t_size, key_builder));
+    match_unit = std::unique_ptr<MUType>(new MUType(t_size, key_builder, lookup_factory));
     table = std::unique_ptr<MatchTable>(
       new MatchTable("test_table", 0, std::move(match_unit), false)
     );

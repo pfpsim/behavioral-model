@@ -34,11 +34,11 @@
 
 #include "match_unit_types.h"
 #include "match_error_codes.h"
+#include "lookup_structures.h"
 #include "bytecontainer.h"
 #include "phv.h"
 #include "packet.h"
 #include "handle_mgr.h"
-#include "lookup_structures_interfaces.h"
 #include "counters.h"
 #include "meters.h"
 
@@ -387,7 +387,7 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
 
  public:
   MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder,
-      LookupStructureFactoryPart<V,E> & lookup_factory)
+      LookupStructureFactoryPart<K> & lookup_factory)
     : MatchUnitAbstract<V>(size, match_key_builder),
       entries(size)
   {
