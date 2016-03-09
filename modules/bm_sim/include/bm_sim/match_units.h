@@ -391,7 +391,7 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
     : MatchUnitAbstract<V>(size, match_key_builder),
       entries(size)
   {
-    lookup_factory.create(lookupStructure);
+    lookup_factory.create(lookupStructure, size, match_key_builder.get_nbytes_key());
   }
 
  private:

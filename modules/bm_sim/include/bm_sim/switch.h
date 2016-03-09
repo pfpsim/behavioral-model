@@ -552,6 +552,10 @@ class SwitchWContexts : public DevMgr, public RuntimeInterface {
     return contexts.at(cxt_id).add_component<T>(ptr);
   }
 
+  void set_lookup_factory(LookupStructureFactory * new_factory){
+    lookup_factory = new_factory;
+  }
+
  private:
   size_t nb_cxts{};
   // TODO(antonin)
@@ -563,7 +567,7 @@ class SwitchWContexts : public DevMgr, public RuntimeInterface {
   static LookupStructureFactory default_lookup_factory;
   // All Switches will refer to that instance unless explicitly
   // given a factory
-  LookupStructureFactory & lookup_factory = default_lookup_factory;
+  LookupStructureFactory * lookup_factory = &default_lookup_factory;
 
   bool enable_swap{false};
 
