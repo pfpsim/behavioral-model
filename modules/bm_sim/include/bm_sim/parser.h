@@ -354,7 +354,7 @@ class Parser : public NamedP4Object {
   //! a packet, you can send it to the appropriate match-action Pipeline for
   //! processing. Depending on how your target is organized, you could also
   //! send it to another Parser for deeper parsing.
-  void parse(Packet *pkt) const;
+  int parse(Packet *pkt) const;
 
   //! Deleted copy constructor
   Parser(const Parser &other) = delete;

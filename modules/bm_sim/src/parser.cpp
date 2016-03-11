@@ -189,7 +189,7 @@ ParseState::operator()(Packet *pkt, const char *data,
   return next_state;
 }
 
-void
+int
 Parser::parse(Packet *pkt) const {
   BMELOG(parser_start, *pkt, *this);
   // TODO(antonin)
@@ -199,12 +199,15 @@ Parser::parse(Packet *pkt) const {
       DBG_CTR_PARSER | get_id());
   BMLOG_DEBUG_PKT(*pkt, "Parser '{}': start", get_name());
   const char *data = pkt->data();
-  if (!init_state) return;
+  if (!init_state) return -1;
   const ParseState *next_state = init_state;
   size_t bytes_parsed = 0;
+  //TODO(eric) adding counter for parser states so it can be returned
+  int state_counter = 0;
   while (next_state) {
     next_state = (*next_state)(pkt, data, &bytes_parsed);
     BMLOG_TRACE("Bytes parsed: {}", bytes_parsed);
+    state_counter++;
   }
   pkt->remove(bytes_parsed);
   BMELOG(parser_done, *pkt, *this);
@@ -212,6 +215,7 @@ Parser::parse(Packet *pkt) const {
       Debugger::PacketId::make(pkt->get_packet_id(), pkt->get_copy_id()),
       DBG_CTR_EXIT(DBG_CTR_PARSER) | get_id());
   BMLOG_DEBUG_PKT(*pkt, "Parser '{}': end", get_name());
+  return state_counter;
 }
 
 }  // namespace bm
