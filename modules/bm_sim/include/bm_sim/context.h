@@ -92,6 +92,11 @@ class Context final {
     return r.second;
   }
 
+  // TODO (eric tremblay) temporary fix (probably)
+  std::shared_ptr<P4Objects> get_p4_objects() {
+    return p4objects;
+  }
+
   //! Retrieve the shared pointer to an object of type `T` previously added to
   //! the Context using add_component().
   template<typename T>

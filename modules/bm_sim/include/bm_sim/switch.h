@@ -109,6 +109,11 @@ class SwitchWContexts : public DevMgr, public RuntimeInterface {
     return &contexts.at(cxt_id);
   }
 
+  // TODO(eric tremblay): temporary fix (probably)
+  std::shared_ptr<P4Objects> get_p4_objects() {
+    return contexts.at(0).get_p4_objects();
+  }
+
   //! Your implementation will be called every time a new packet is received by
   //! the device.
   virtual int receive(int port_num, const char *buffer, int len) = 0;
