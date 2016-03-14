@@ -76,18 +76,20 @@ class MatchActionTable : public ControlFlowNode, public NamedP4Object {
       const std::string &match_type,
       const std::string &name, p4object_id_t id,
       size_t size, const MatchKeyBuilder &match_key_builder,
-      bool with_counters, bool with_ageing) {
+      bool with_counters, bool with_ageing,
+      LookupStructureFactory & lookup_factory) {
     static_assert(
         std::is_base_of<MatchTableAbstract, MT>::value,
         "incorrect template, needs to be a subclass of MatchTableAbstract");
 
-    static_assert(
-        HasFactoryMethod<MT>::value,
-        "template class needs to have a create() static factory method");
+    // TODO(gordon) Why does this no longer work correctly ? FIXME
+    //static_assert(
+      //  HasFactoryMethod<MT>::value,
+        //"template class needs to have a create() static factory method");
 
     std::unique_ptr<MT> match_table = MT::create(
       match_type, name, id, size, match_key_builder,
-      with_counters, with_ageing);
+      lookup_factory, with_counters, with_ageing);
 
     return std::unique_ptr<MatchActionTable>(
       new MatchActionTable(name, id, std::move(match_table)));

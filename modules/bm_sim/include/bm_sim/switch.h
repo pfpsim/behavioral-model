@@ -83,6 +83,7 @@
 #include "runtime_interface.h"
 #include "dev_mgr.h"
 #include "phv_source.h"
+#include "lookup_structures.h"
 
 namespace bm {
 
@@ -556,12 +557,22 @@ class SwitchWContexts : public DevMgr, public RuntimeInterface {
     return contexts.at(cxt_id).add_component<T>(ptr);
   }
 
+  void set_lookup_factory(LookupStructureFactory * new_factory){
+    lookup_factory = new_factory;
+  }
+
  private:
   size_t nb_cxts{};
   // TODO(antonin)
   // Context is not-movable, but is default-constructible, so I can put it in a
   // std::vector
   std::vector<Context> contexts{};
+
+  // Create an instance of the default lookup factory
+  static LookupStructureFactory default_lookup_factory;
+  // All Switches will refer to that instance unless explicitly
+  // given a factory
+  LookupStructureFactory * lookup_factory = &default_lookup_factory;
 
   bool enable_swap{false};
 

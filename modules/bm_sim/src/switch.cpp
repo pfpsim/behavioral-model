@@ -49,6 +49,8 @@ SwitchWContexts::SwitchWContexts(size_t nb_cxts, bool enable_swap)
   }
 }
 
+LookupStructureFactory SwitchWContexts::default_lookup_factory {} ;
+
 void
 SwitchWContexts::add_required_field(const std::string &header_name,
                                   const std::string &field_name) {
@@ -79,11 +81,13 @@ SwitchWContexts::init_objects(const std::string &json_path, int dev_id,
     notifications_transport = std::move(transport);
   }
 
+
   for (size_t cxt_id = 0; cxt_id < nb_cxts; cxt_id++) {
     auto &cxt = contexts.at(cxt_id);
     cxt.set_device_id(device_id);
     cxt.set_notifications_transport(notifications_transport);
-    int status = cxt.init_objects(&fs, required_fields, arith_fields);
+    int status = cxt.init_objects(&fs, *lookup_factory,
+                                  required_fields, arith_fields);
     fs.clear();
     fs.seekg(0, std::ios::beg);
     if (status != 0) return status;
@@ -180,7 +184,7 @@ SwitchWContexts::load_new_config(const std::string &new_config) {
   if (!enable_swap) return ErrorCode::CONFIG_SWAP_DISABLED;
   std::istringstream ss(new_config);
   for (auto &cxt : contexts) {
-    ErrorCode rc = cxt.load_new_config(&ss, required_fields, arith_fields);
+    ErrorCode rc = cxt.load_new_config(&ss, *lookup_factory, required_fields, arith_fields);
     if (rc != ErrorCode::SUCCESS) return rc;
     ss.clear();
     ss.seekg(0, std::ios::beg);
