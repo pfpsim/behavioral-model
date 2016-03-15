@@ -295,6 +295,53 @@ MatchTable::add_entry(const std::vector<MatchKeyParam> &match_key,
 }
 
 MatchErrorCode
+MatchTable::add_entry(const std::vector<std::vector<MatchKeyParam>> &match_key,
+                              std::vector<const ActionFn *> action_fn,
+                              std::vector<ActionData> action_data,  // move it
+                              std::vector<entry_handle_t *> handle,
+                              std::vector<int> priority) {
+  if(priority.size() == 1 && priority[0] == -1) {
+    for(unsigned long i = 0; i < match_key.size() - 1; i++) {
+      priority.push_back(-1);
+    }
+  }
+  std::vector<ActionEntry> action_entries;
+  for(unsigned long i = 0; i < action_data.size(); i++) {
+    ActionFnEntry action_fn_entry(action_fn[i], std::move(action_data[i]));
+    const ControlFlowNode *next_node = get_next_node(action_fn[i]->get_id());
+    action_entries.push_back(ActionEntry(std::move(action_fn_entry), next_node));
+  }
+
+  MatchErrorCode rc = MatchErrorCode::SUCCESS;
+
+  {
+    WriteLock lock = lock_write();
+
+    rc = match_unit->add_entry(
+        match_key,
+        action_entries,
+        handle, priority);
+  }
+
+  // because we let go of the lock, there is a possibility of the entry being
+  // removed
+  // TODO(antonin): we can try to solve this by using an boost upgrade lock, but
+  // I don't want to make things to complicated for logging. Maybe ideally, we
+  // would print the parameters passed to the function, and not dump the entry,
+  // but it is convenient to be able to print the entry in exactly the same
+  // format as for a lookup
+
+  // if (rc == MatchErrorCode::SUCCESS) {
+  //   BMLOG_DEBUG("Entry {} added to table '{}'", *handle[i], get_name());
+  //   BMLOG_DEBUG(dump_entry_string(*handle[i]));
+  // } else {
+  //   BMLOG_ERROR("Error when trying to add entry to table '{}'", get_name());
+  // }
+
+  return rc;
+}
+
+MatchErrorCode
 MatchTable::delete_entry(entry_handle_t handle) {
   MatchErrorCode rc = MatchErrorCode::SUCCESS;
 

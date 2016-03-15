@@ -30,6 +30,7 @@ class LookupStructure {
     //! Store an entry in the lookup structure. Associates the given handle
     //! with the given entry.
     virtual void store_entry(const K & key, internal_handle_t handle) = 0;
+    virtual void store_entry(const std::vector<K> & keys, std::vector<internal_handle_t> handles) = 0;
 
     //! Remove a given entry from the structure. Has no effect if the entry
     //! does not exist.

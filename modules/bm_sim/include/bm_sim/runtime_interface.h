@@ -56,6 +56,15 @@ class RuntimeInterface {
                int priority = -1  /*only used for ternary*/) = 0;
 
   virtual MatchErrorCode
+  mt_add_entry(size_t cxt_id,
+              const std::string &table_name,
+              const std::vector<std::vector<MatchKeyParam>> &match_key,
+              const std::vector<std::string> &action_name,
+              std::vector<ActionData> action_data,  // will be moved
+              std::vector<entry_handle_t *> handle,
+              std::vector<int> priority = {-1}  /*only used for ternary*/) = 0;
+
+  virtual MatchErrorCode
   mt_set_default_action(size_t cxt_id,
                         const std::string &table_name,
                         const std::string &action_name,

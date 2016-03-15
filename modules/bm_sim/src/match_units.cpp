@@ -703,6 +703,28 @@ MatchUnitAbstract<V>::add_entry(const std::vector<MatchKeyParam> &match_key,
 
 template<typename V>
 MatchErrorCode
+MatchUnitAbstract<V>::add_entry(const std::vector<std::vector<MatchKeyParam>> &match_key,
+                          std::vector<V> &value,  // by value for possible std::move
+                          std::vector<entry_handle_t*> handle,
+                          std::vector<int> priority) {
+  if(priority.size() == 1 && priority[0] == -1) {
+    unsigned long mk_size = match_key.size();
+    for(unsigned long i = 0; i < mk_size - 1; i++) {
+      priority.push_back(-1);
+    }
+  }
+  MatchErrorCode rc = add_entry_(match_key, value, handle, priority);
+  if (rc != MatchErrorCode::SUCCESS) return rc;
+  for(unsigned long i = 0; i < handle.size(); i++) {
+    EntryMeta &meta = entry_meta[HANDLE_INTERNAL(*handle[i])];
+    meta.reset();
+    meta.version = HANDLE_VERSION(*handle[i]);
+  }
+  return rc;
+}
+
+template<typename V>
+MatchErrorCode
 MatchUnitAbstract<V>::delete_entry(entry_handle_t handle) {
   return delete_entry_(handle);
 }
@@ -843,6 +865,58 @@ MatchUnitGeneric<K,V>::add_entry_(const std::vector<MatchKeyParam> &match_key,
   entry.value = std::move(value);
   entry.key.version = version;
   entries[handle_] = std::move(entry);
+
+  return MatchErrorCode::SUCCESS;
+}
+
+template <typename K, typename V>
+MatchErrorCode
+MatchUnitGeneric<K,V>::add_entry_(const std::vector<std::vector<MatchKeyParam>> &match_key,
+                        std::vector<V> &value,  // by value for possible std::move
+                        std::vector<entry_handle_t*> handle,
+                        std::vector<int> priority) {
+  const auto &KeyB = this->match_key_builder;
+
+  std::vector<K> entry_key_vector;
+  std::vector<internal_handle_t> handle_vector;
+  for(unsigned long i = 0; i < match_key.size(); i++) {
+    if (!KeyB.match_params_sanity_check(match_key[i]))
+      return MatchErrorCode::BAD_MATCH_KEY;
+
+
+    // for why "template" keyword is needed, see:
+    // http://stackoverflow.com/questions/1840253/c-template-member-function-of-template-class-called-from-template-function/1840318#1840318
+    Entry entry = KeyB.template match_params_to_entry<Entry>(match_key[i]);
+
+    // needs to go before duplicate check, because 2 different user keys can
+    // become the same key. We would then have a problem when erasing the key from
+    // the hash map.
+    // TODO(antonin): maybe change this by modifying delete_entry method
+    // TODO(antonin): does this really make sense for a Ternary/LPM table?
+    KeyB.apply_big_mask(&entry.key.data);
+
+    // check if the key is already present
+    set_priority(entry.key, priority[i]); // For Ternary
+    if (lookupStructure->entry_exists(entry.key))
+      return MatchErrorCode::DUPLICATE_ENTRY;
+
+    entry_key_vector.push_back(entry.key);
+
+    internal_handle_t handle_;
+    MatchErrorCode status = this->get_and_set_handle(&handle_);
+    if (status != MatchErrorCode::SUCCESS) return status;
+
+    uint32_t version = entries[handle_].key.version;
+    *handle[i] = HANDLE_SET(version, handle_);
+    handle_vector.push_back(handle_);
+
+    entry.value = std::move(value[i]);
+    entry.key.version = version;
+    entries[handle_] = std::move(entry);
+  }
+
+  // key is copied, which is not great
+  lookupStructure->store_entry(entry_key_vector, handle_vector);
 
   return MatchErrorCode::SUCCESS;
 }

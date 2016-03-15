@@ -248,6 +248,24 @@ class SwitchWContexts : public DevMgr, public RuntimeInterface {
   }
 
   MatchErrorCode
+  mt_add_entry(size_t cxt_id,
+               const std::string &table_name,
+               const std::vector<std::vector<MatchKeyParam>> &match_key,
+               const std::vector<std::string> &action_name,
+               std::vector<ActionData> action_data,
+               std::vector<entry_handle_t *> handle,
+               std::vector<int> priority = {-1}  /*only used for ternary*/) override {
+    if(priority.size() == 1 && priority[0] == -1) {
+      for(unsigned long i = 0; i < match_key.size() - 1; i++) {
+        priority.push_back(-1);
+      }
+    }
+    return contexts.at(cxt_id).mt_add_entry(
+        table_name, match_key, action_name,
+        std::move(action_data), handle, priority);
+  }
+
+  MatchErrorCode
   mt_set_default_action(size_t cxt_id,
                         const std::string &table_name,
                         const std::string &action_name,

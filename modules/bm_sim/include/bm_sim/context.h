@@ -147,6 +147,14 @@ class Context final {
                int priority = -1  /*only used for ternary*/);
 
   MatchErrorCode
+  mt_add_entry(const std::string &table_name,
+              const std::vector<std::vector<MatchKeyParam>> &match_key,
+              const std::vector<std::string> &action_name,
+              std::vector<ActionData> action_data,
+              std::vector<entry_handle_t *> handle,
+              std::vector<int> priority = {-1}  /*only used for ternary*/);
+
+  MatchErrorCode
   mt_set_default_action(const std::string &table_name,
                         const std::string &action_name,
                         ActionData action_data);
