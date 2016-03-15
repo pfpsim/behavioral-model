@@ -194,15 +194,19 @@ class TernaryMap : public LookupStructure<TernaryMatchKey> {
 
 } // anonymous namespace
 
-void LookupStructureFactory::create(std::unique_ptr<LookupStructure<ExactMatchKey>> & ls){
-  ls.reset(new ExactMap(100));
+void LookupStructureFactory::create(std::unique_ptr<LookupStructure<ExactMatchKey>> & ls, size_t size, size_t nbytes_key){
+  (void) nbytes_key;
+  ls.reset(new ExactMap(size));
 }
 
-void LookupStructureFactory::create(std::unique_ptr<LookupStructure<LPMMatchKey>> & ls){
-  ls.reset(new LPMTrie(8));
+void LookupStructureFactory::create(std::unique_ptr<LookupStructure<LPMMatchKey>> & ls, size_t size, size_t nbytes_key){
+  (void)size;
+  ls.reset(new LPMTrie(nbytes_key));
 }
 
-void LookupStructureFactory::create(std::unique_ptr<LookupStructure<TernaryMatchKey>> & ls){
+void LookupStructureFactory::create(std::unique_ptr<LookupStructure<TernaryMatchKey>> & ls, size_t size, size_t nbytes_key){
+  (void) nbytes_key;
+  (void) size;
   ls.reset(new TernaryMap());
 }
 

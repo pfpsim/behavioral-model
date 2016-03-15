@@ -44,7 +44,8 @@ class LookupStructure {
 template <class K>
 class LookupStructureFactoryPart {
   public:
-    virtual void create( std::unique_ptr<LookupStructure<K>> & ptr ) = 0;
+    virtual void create( std::unique_ptr<LookupStructure<K>> & ptr,
+       size_t size, size_t nbytes_key ) = 0;
 };
 
 class LookupStructureFactory
@@ -56,11 +57,14 @@ class LookupStructureFactory
 {
   public:
     virtual void create
-      (std::unique_ptr< LookupStructure<ExactMatchKey>> & ) override;
+      (std::unique_ptr< LookupStructure<ExactMatchKey>> &,
+       size_t size, size_t nbytes_key ) override;
     virtual void create
-      (std::unique_ptr< LookupStructure<LPMMatchKey>> & ) override;
+      (std::unique_ptr< LookupStructure<LPMMatchKey>> &,
+       size_t size, size_t nbytes_key ) override;
     virtual void create
-      (std::unique_ptr< LookupStructure<TernaryMatchKey>> & ) override;
+      (std::unique_ptr< LookupStructure<TernaryMatchKey>> &,
+       size_t size, size_t nbytes_key ) override;
 };
 
 
