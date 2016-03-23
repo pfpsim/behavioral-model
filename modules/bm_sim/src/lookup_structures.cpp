@@ -2,6 +2,8 @@
 
 #include <algorithm> // for std::swap
 #include <unordered_map>
+#include <vector>
+#include <tuple>
 
 #include "bm_sim/lookup_structures.h"
 #include "bm_sim/match_unit_types.h"
@@ -117,42 +119,88 @@ class ExactMap : public LookupStructure<ExactMatchKey> {
       entries_map{};
 };
 
-// TODO
-// uuuuuuuuuuuuugh ok so we will have to do a little bit of redundant
-// storage of some stuff.
-//
-// ok but already LPM and Exact are storing handles two places...
-// but they're not duplicating the keys and stuff...
-//
-// but we need this to be completely seperated to be able to model it....
-//
-// blargh
-//
 class TernaryMap : public LookupStructure<TernaryMatchKey> {
   public:
+    TernaryMap(size_t nbytes_key)
+      : nbytes_key(nbytes_key) {}
+
     virtual bool lookup(const ByteContainer & key_data,
         internal_handle_t * handle) override{
-      (void) key_data;
-      (void) handle;
-      return true;
+      int min_priority = std::numeric_limits<int>::max();;
+      bool match;
+
+      const TernaryMatchKey *entry;
+      const TernaryMatchKey *min_entry = nullptr;
+      entry_handle_t min_handle = 0;
+
+      // Loop through every handle that we have. Return the entry with matching mask|key combo
+      // and highest (numerically lowest) priority
+
+      for (auto it = this->handles.begin(); it != this->handles.end(); ++it) {
+        entry = &std::get<0>(*it);
+
+        if (entry->priority >= min_priority) continue;
+
+        match = true;
+        for (size_t byte_index = 0; byte_index < this->nbytes_key; byte_index++) {
+          if (entry->data[byte_index] !=
+              (key_data[byte_index] & entry->mask[byte_index])) {
+            match = false;
+            break;
+          }
+        }
+
+        if (match) {
+          min_priority = entry->priority;
+          min_entry = entry;
+          min_handle = std::get<1>(*it);
+        }
+      }
+
+      if (min_entry) {
+        *handle = min_handle;
+        return true;
+      }
+
+      return false;
     }
 
     virtual bool entry_exists(const TernaryMatchKey & key) override{
-      (void) key;
-      return false;
+      auto it = find_handle(key);
+
+      return it != this->handles.end();
     }
 
     virtual void store_entry(const TernaryMatchKey & key,
         internal_handle_t handle) override{
-      (void) key;
-      (void) handle;
+      // TODO avoid copying key ?
+      handles.emplace_back(std::make_tuple(key, handle));
     }
 
     virtual void delete_entry(const TernaryMatchKey & key) override{
-      (void) key;
+      auto it = find_handle(key);
+      this->handles.erase(it);
     }
 
     virtual void clear() override{
+      this->handles.clear();
+    }
+  private:
+    std::vector<std::tuple<TernaryMatchKey, internal_handle_t>> handles;
+    size_t nbytes_key;
+
+    decltype(handles)::iterator find_handle(const TernaryMatchKey & key) {
+      auto it = this->handles.begin();
+      for (; it != this->handles.end(); ++it) {
+        const TernaryMatchKey &entry = std::get<0>(*it);
+
+        if (entry.priority == key.priority &&
+            entry.data == key.data &&
+            entry.mask == key.mask) {
+          break;
+        }
+      }
+      return it;
     }
 };
 
@@ -169,9 +217,8 @@ void LookupStructureFactory::create(std::unique_ptr<LookupStructure<LPMMatchKey>
 }
 
 void LookupStructureFactory::create(std::unique_ptr<LookupStructure<TernaryMatchKey>> & ls, size_t size, size_t nbytes_key){
-  (void) nbytes_key;
   (void) size;
-  ls.reset(new TernaryMap());
+  ls.reset(new TernaryMap(nbytes_key));
 }
 
 } // namespace bm

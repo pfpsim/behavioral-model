@@ -826,8 +826,10 @@ MatchUnitGeneric<K,V>::add_entry_(const std::vector<MatchKeyParam> &match_key,
   // TODO(antonin): does this really make sense for a Ternary/LPM table?
   KeyB.apply_big_mask(&entry.key.data);
 
+  // For ternary. Must be done before the entry_exists call below
+  set_priority(entry.key, priority);
+
   // check if the key is already present
-  set_priority(entry.key, priority); // For Ternary
   if (lookupStructure->entry_exists(entry.key))
     return MatchErrorCode::DUPLICATE_ENTRY;
 
