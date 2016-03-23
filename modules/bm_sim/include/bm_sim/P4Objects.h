@@ -62,7 +62,7 @@ class P4Objects {
       : outstream(outstream) { }
 
   int init_objects(std::istream *is,
-                   LookupStructureFactory & lookup_factory,
+                   LookupStructureFactory * lookup_factory,
                    int device_id = 0, size_t cxt_id = 0,
                    std::shared_ptr<TransportIface> transport = nullptr,
                    const std::set<header_field_pair> &required_fields =

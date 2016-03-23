@@ -83,7 +83,7 @@ protected:
 
     LookupStructureFactory factory;
 
-    std::unique_ptr<MUExact> match_unit(new MUExact(1, key_builder, factory));
+    std::unique_ptr<MUExact> match_unit(new MUExact(1, key_builder, &factory));
 
     // counters disabled, ageing enabled
     table = std::unique_ptr<MatchTable>(

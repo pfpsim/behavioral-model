@@ -72,7 +72,7 @@ TEST(P4Objects, LoadFromJSON1) {
   std::istringstream is(JSON_TEST_STRING_1);
   P4Objects objects;
   LookupStructureFactory factory;
-  ASSERT_EQ(0, objects.init_objects(&is, factory));
+  ASSERT_EQ(0, objects.init_objects(&is, &factory));
 
   ASSERT_NE(nullptr, objects.get_pipeline("ingress"));
   ASSERT_NE(nullptr, objects.get_action("_drop"));
@@ -96,7 +96,7 @@ TEST(P4Objects, LoadFromJSON2) {
   std::istringstream is(JSON_TEST_STRING_2);
   P4Objects objects;
   LookupStructureFactory factory;
-  ASSERT_EQ(0, objects.init_objects(&is, factory));
+  ASSERT_EQ(0, objects.init_objects(&is, &factory));
 
   // this second test just checks that learn lists and indirect tables get
   // parsed correctly
@@ -114,7 +114,7 @@ TEST(P4Objects, Empty) {
   std::istringstream is("{}");
   P4Objects objects;
   LookupStructureFactory factory;
-  ASSERT_EQ(0, objects.init_objects(&is, factory));
+  ASSERT_EQ(0, objects.init_objects(&is, &factory));
 }
 
 TEST(P4Objects, UnknownPrimitive) {
@@ -123,7 +123,7 @@ TEST(P4Objects, UnknownPrimitive) {
   P4Objects objects(os);
   LookupStructureFactory factory;
   std::string expected("Unknown primitive action: bad_primitive\n");
-  ASSERT_NE(0, objects.init_objects(&is, factory));
+  ASSERT_NE(0, objects.init_objects(&is, &factory));
   EXPECT_EQ(expected, os.str());
 }
 
@@ -133,7 +133,7 @@ TEST(P4Objects, PrimitiveBadParamCount) {
   LookupStructureFactory factory;
   P4Objects objects(os);
   std::string expected("Invalid number of parameters for primitive action drop: expected 0 but got 1\n");
-  ASSERT_NE(0, objects.init_objects(&is, factory));
+  ASSERT_NE(0, objects.init_objects(&is, &factory));
   EXPECT_EQ(expected, os.str());
 }
 
@@ -143,7 +143,7 @@ TEST(P4Objects, UnknownHash) {
   LookupStructureFactory factory;
   P4Objects objects(os);
   std::string expected("Unknown hash algorithm: bad_hash_1\n");
-  ASSERT_NE(0, objects.init_objects(&is, factory));
+  ASSERT_NE(0, objects.init_objects(&is, &factory));
   EXPECT_EQ(expected, os.str());
 }
 
@@ -153,7 +153,7 @@ TEST(P4Objects, UnknownHashSelector) {
   LookupStructureFactory factory;
   P4Objects objects(os);
   std::string expected("Unknown hash algorithm: bad_hash_2\n");
-  ASSERT_NE(0, objects.init_objects(&is, factory));
+  ASSERT_NE(0, objects.init_objects(&is, &factory));
   EXPECT_EQ(expected, os.str());
 }
 
@@ -166,7 +166,7 @@ TEST(P4Objects, RequiredField) {
   P4Objects objects(os);
   std::string expected("Field standard_metadata.egress_port is required by switch target but is not defined\n");
   // 0 for device_id, 0 for cxt_id, nullptr for transport
-  ASSERT_NE(0, objects.init_objects(&is, factory, 0, 0, nullptr, required_fields));
+  ASSERT_NE(0, objects.init_objects(&is, &factory, 0, 0, nullptr, required_fields));
   EXPECT_EQ(expected, os.str());
 }
 
@@ -174,7 +174,7 @@ TEST(P4Objects, FieldAlias) {
   std::istringstream is("{\"header_types\":[{\"name\":\"hdrA_t\",\"id\":0,\"fields\":[[\"f1\",8],[\"f2\",8]]}],\"headers\":[{\"name\":\"hdrA\",\"id\":0,\"header_type\":\"hdrA_t\"}],\"field_aliases\":[[\"this_is.my_alias\",[\"hdrA\",\"f1\"]]]}");
   P4Objects objects;
   LookupStructureFactory factory;
-  ASSERT_EQ(0, objects.init_objects(&is, factory));
+  ASSERT_EQ(0, objects.init_objects(&is, &factory));
 
   ASSERT_TRUE(objects.field_exists("hdrA", "f1"));
   ASSERT_TRUE(objects.field_exists("this_is", "my_alias"));
@@ -189,7 +189,7 @@ TEST(P4Objects, Reset) {
   std::istringstream is(JSON_TEST_STRING_1);
   P4Objects objects;
   LookupStructureFactory factory;
-  ASSERT_EQ(0, objects.init_objects(&is, factory));
+  ASSERT_EQ(0, objects.init_objects(&is, &factory));
   // TODO(antonin): this test is not doing anything useful, but it is pretty
   // hard to test for reset
   objects.reset_state();
@@ -241,7 +241,7 @@ TEST(P4Objects, ExternInstanceDeclaration) {
     LookupStructureFactory factory;
     create_extern_instance_json(&is, "my_extern_instance", "my_extern_type",
                                 "attr1", "hexstr");
-    ASSERT_EQ(0, objects.init_objects(&is, factory));
+    ASSERT_EQ(0, objects.init_objects(&is, &factory));
   }
 
   {
@@ -251,7 +251,7 @@ TEST(P4Objects, ExternInstanceDeclaration) {
     create_extern_instance_json(&is, "my_extern_instance", "bad_type",
                                 "attr1", "hexstr");
     std::string expected_error_msg = "Invalid reference to extern type 'bad_type'\n";
-    ASSERT_NE(0, objects.init_objects(&is, factory));
+    ASSERT_NE(0, objects.init_objects(&is, &factory));
     EXPECT_EQ(expected_error_msg, os.str());
   }
 
@@ -262,7 +262,7 @@ TEST(P4Objects, ExternInstanceDeclaration) {
     create_extern_instance_json(&is, "my_extern_instance", "my_extern_type",
                                 "bad_attr", "hexstr");
     std::string expected_error_msg = "Extern type 'my_extern_type' has no attribute 'bad_attr'\n";
-    ASSERT_NE(0, objects.init_objects(&is, factory));
+    ASSERT_NE(0, objects.init_objects(&is, &factory));
     EXPECT_EQ(expected_error_msg, os.str());
   }
 
@@ -273,7 +273,7 @@ TEST(P4Objects, ExternInstanceDeclaration) {
     create_extern_instance_json(&is, "my_extern_instance", "my_extern_type",
                                 "attr1", "unsupported_type");
     std::string expected_error_msg = "Only attributes of type 'hexstr' are supported for extern instance attribute initialization\n";
-    ASSERT_NE(0, objects.init_objects(&is, factory));
+    ASSERT_NE(0, objects.init_objects(&is, &factory));
     EXPECT_EQ(expected_error_msg, os.str());
   }
 }

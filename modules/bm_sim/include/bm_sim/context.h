@@ -330,7 +330,7 @@ class Context final {
 
   typedef P4Objects::header_field_pair header_field_pair;
   int init_objects(std::istream *is,
-                   LookupStructureFactory & lookup_factory,
+                   LookupStructureFactory * lookup_factory,
                    const std::set<header_field_pair> &required_fields =
                      std::set<header_field_pair>(),
                    const std::set<header_field_pair> &arith_fields =
@@ -338,7 +338,7 @@ class Context final {
 
   ErrorCode load_new_config(
       std::istream *is,
-      LookupStructureFactory & lookup_factory,
+      LookupStructureFactory * lookup_factory,
       const std::set<header_field_pair> &required_fields =
         std::set<header_field_pair>(),
       const std::set<header_field_pair> &arith_fields =

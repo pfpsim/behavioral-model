@@ -398,9 +398,8 @@ class MatchKeyBuilderHelper {
     return params;
   }
 
-  template <typename E,
-            typename std::enable_if<decltype(E::key)::mut == MatchUnitType::EXACT, int>::type
-            = 0>
+  template <typename E, typename std::enable_if<
+              decltype(E::key)::mut == MatchUnitType::EXACT, int>::type = 0>
   static E
   match_params_to_entry(const MatchKeyBuilder &kb,
                         const std::vector<MatchKeyParam> &params) {
@@ -413,9 +412,8 @@ class MatchKeyBuilderHelper {
     return entry;
   }
 
-  template <typename E,
-            typename std::enable_if<decltype(E::key)::mut == MatchUnitType::LPM, int>::type
-            = 0>
+  template <typename E, typename std::enable_if<
+              decltype(E::key)::mut == MatchUnitType::LPM, int>::type = 0>
   static E
   match_params_to_entry(const MatchKeyBuilder &kb,
                         const std::vector<MatchKeyParam> &params) {
@@ -444,9 +442,8 @@ class MatchKeyBuilderHelper {
     return entry;
   }
 
-  template <typename E,
-            typename std::enable_if<decltype(E::key)::mut == MatchUnitType::TERNARY, int>::type
-            = 0>
+  template <typename E, typename std::enable_if<
+              decltype(E::key)::mut == MatchUnitType::TERNARY, int>::type = 0>
   static E
   match_params_to_entry(const MatchKeyBuilder &kb,
                         const std::vector<MatchKeyParam> &params) {
@@ -766,13 +763,13 @@ namespace {
 
   template <typename T,
     typename std::enable_if<T::mut == MatchUnitType::TERNARY, int>::type = 0>
-  int get_priority(const T & entry){
+  int get_priority(const T & entry) {
     return entry.priority;
   }
   template <typename T,
     typename std::enable_if<T::mut != MatchUnitType::TERNARY, int>::type = 0>
-  int get_priority(const T & entry){
-    (void) entry; // dodge unused param error
+  int get_priority(const T & entry) {
+    (void) entry;  // dodge unused param error
     return -1;
   }
 
@@ -780,22 +777,22 @@ namespace {
 
   template <typename T,
     typename std::enable_if<T::mut == MatchUnitType::TERNARY, int>::type = 0>
-  void set_priority(T & entry, int p){
-    entry.priority = p;
+  void set_priority(T * entry, int p) {
+    entry->priority = p;
   }
   template <typename T,
     typename std::enable_if<T::mut != MatchUnitType::TERNARY, int>::type = 0>
-  void set_priority(T & entry, int p){
-    (void) entry; // dodge unused param error
+  void set_priority(T * entry, int p) {
+    (void) entry;  // dodge unused param error
     (void) p;
   }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 
 template <typename K, typename V>
-typename MatchUnitGeneric<K,V>::MatchUnitLookup
-MatchUnitGeneric<K,V>::lookup_key(const ByteContainer &key) const {
+typename MatchUnitGeneric<K, V>::MatchUnitLookup
+MatchUnitGeneric<K, V>::lookup_key(const ByteContainer &key) const {
   internal_handle_t handle_;
   bool entry_found = lookupStructure->lookup(key, &handle_);
   if (entry_found) {
@@ -808,7 +805,7 @@ MatchUnitGeneric<K,V>::lookup_key(const ByteContainer &key) const {
 
 template <typename K, typename V>
 MatchErrorCode
-MatchUnitGeneric<K,V>::add_entry_(const std::vector<MatchKeyParam> &match_key,
+MatchUnitGeneric<K, V>::add_entry_(const std::vector<MatchKeyParam> &match_key,
                             V value, entry_handle_t *handle, int priority) {
   const auto &KeyB = this->match_key_builder;
 
@@ -827,7 +824,7 @@ MatchUnitGeneric<K,V>::add_entry_(const std::vector<MatchKeyParam> &match_key,
   KeyB.apply_big_mask(&entry.key.data);
 
   // For ternary. Must be done before the entry_exists call below
-  set_priority(entry.key, priority);
+  set_priority(&entry.key, priority);
 
   // check if the key is already present
   if (lookupStructure->entry_exists(entry.key))
@@ -851,7 +848,7 @@ MatchUnitGeneric<K,V>::add_entry_(const std::vector<MatchKeyParam> &match_key,
 
 template <typename K, typename V>
 MatchErrorCode
-MatchUnitGeneric<K,V>::delete_entry_(entry_handle_t handle) {
+MatchUnitGeneric<K, V>::delete_entry_(entry_handle_t handle) {
   internal_handle_t handle_ = HANDLE_INTERNAL(handle);
   if (!this->valid_handle_(handle_)) return MatchErrorCode::INVALID_HANDLE;
   Entry &entry = entries[handle_];
@@ -865,7 +862,7 @@ MatchUnitGeneric<K,V>::delete_entry_(entry_handle_t handle) {
 
 template <typename K, typename V>
 MatchErrorCode
-MatchUnitGeneric<K,V>::modify_entry_(entry_handle_t handle, V value) {
+MatchUnitGeneric<K, V>::modify_entry_(entry_handle_t handle, V value) {
   internal_handle_t handle_ = HANDLE_INTERNAL(handle);
   if (!this->valid_handle_(handle_)) return MatchErrorCode::INVALID_HANDLE;
   Entry &entry = entries[handle_];
@@ -878,7 +875,7 @@ MatchUnitGeneric<K,V>::modify_entry_(entry_handle_t handle, V value) {
 
 template <typename K, typename V>
 MatchErrorCode
-MatchUnitGeneric<K,V>::get_value_(entry_handle_t handle, const V **value) {
+MatchUnitGeneric<K, V>::get_value_(entry_handle_t handle, const V **value) {
   internal_handle_t handle_ = HANDLE_INTERNAL(handle);
   if (!this->valid_handle_(handle_)) return MatchErrorCode::INVALID_HANDLE;
   Entry &entry = entries[handle_];
@@ -891,7 +888,7 @@ MatchUnitGeneric<K,V>::get_value_(entry_handle_t handle, const V **value) {
 
 template <typename K, typename V>
 MatchErrorCode
-MatchUnitGeneric<K,V>::get_entry_(entry_handle_t handle,
+MatchUnitGeneric<K, V>::get_entry_(entry_handle_t handle,
                             std::vector<MatchKeyParam> *match_key,
                             const V **value, int *priority) const {
   internal_handle_t handle_ = HANDLE_INTERNAL(handle);
@@ -910,7 +907,7 @@ MatchUnitGeneric<K,V>::get_entry_(entry_handle_t handle,
 
 template <typename K, typename V>
 MatchErrorCode
-MatchUnitGeneric<K,V>::dump_match_entry_(std::ostream *out,
+MatchUnitGeneric<K, V>::dump_match_entry_(std::ostream *out,
                                    entry_handle_t handle) const {
   internal_handle_t handle_ = HANDLE_INTERNAL(handle);
   const Entry &entry = entries[handle_];
@@ -928,7 +925,7 @@ MatchUnitGeneric<K,V>::dump_match_entry_(std::ostream *out,
 
 template <typename K, typename V>
 void
-MatchUnitGeneric<K,V>::dump_(std::ostream *stream) const {
+MatchUnitGeneric<K, V>::dump_(std::ostream *stream) const {
   for (internal_handle_t handle_ : this->handles) {
     const Entry &entry = entries[handle_];
     (*stream) << HANDLE_SET(entry.key.version, handle_) << ": "
@@ -950,7 +947,7 @@ MatchUnitGeneric<K,V>::dump_(std::ostream *stream) const {
 
 template <typename K, typename V>
 void
-MatchUnitGeneric<K,V>::reset_state_() {
+MatchUnitGeneric<K, V>::reset_state_() {
   entries = std::vector<Entry>(this->size);
   lookupStructure->clear();
 }
