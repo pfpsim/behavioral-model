@@ -477,7 +477,7 @@ Context::set_force_arith(bool v) {
 
 int
 Context::init_objects(std::istream *is,
-                      LookupStructureFactory & lookup_factory,
+                      LookupStructureFactory * lookup_factory,
                       const std::set<header_field_pair> &required_fields,
                       const std::set<header_field_pair> &arith_fields) {
   // initally p4objects_rt == p4objects, so this works
@@ -493,7 +493,7 @@ Context::init_objects(std::istream *is,
 Context::ErrorCode
 Context::load_new_config(
     std::istream *is,
-    LookupStructureFactory & lookup_factory,
+    LookupStructureFactory * lookup_factory,
     const std::set<header_field_pair> &required_fields,
     const std::set<header_field_pair> &arith_fields) {
   boost::unique_lock<boost::shared_mutex> lock(request_mutex);

@@ -35,7 +35,7 @@ template <typename V>
 std::unique_ptr<MatchUnitAbstract<V> >
 create_match_unit(const std::string match_type, const size_t size,
                   const MatchKeyBuilder &match_key_builder,
-                  LookupStructureFactory & lookup_factory) {
+                  LookupStructureFactory * lookup_factory) {
   typedef MatchUnitExact<V> MUExact;
   typedef MatchUnitLPM<V> MULPM;
   typedef MatchUnitTernary<V> MUTernary;
@@ -404,7 +404,7 @@ std::unique_ptr<MatchTable>
 MatchTable::create(const std::string &match_type,
                    const std::string &name, p4object_id_t id,
                    size_t size, const MatchKeyBuilder &match_key_builder,
-                    LookupStructureFactory & lookup_factory,
+                   LookupStructureFactory * lookup_factory,
                    bool with_counters, bool with_ageing) {
   std::unique_ptr<MatchUnitAbstract<ActionEntry> > match_unit =
     create_match_unit<ActionEntry>(match_type, size, match_key_builder,
@@ -429,7 +429,7 @@ MatchTableIndirect::create(const std::string &match_type,
                            const std::string &name, p4object_id_t id,
                            size_t size,
                            const MatchKeyBuilder &match_key_builder,
-                            LookupStructureFactory & lookup_factory,
+                           LookupStructureFactory * lookup_factory,
                            bool with_counters, bool with_ageing) {
   std::unique_ptr<MatchUnitAbstract<IndirectIndex> > match_unit =
     create_match_unit<IndirectIndex>(match_type, size, match_key_builder,
@@ -801,7 +801,7 @@ MatchTableIndirectWS::create(const std::string &match_type,
                              const std::string &name, p4object_id_t id,
                              size_t size,
                              const MatchKeyBuilder &match_key_builder,
-                              LookupStructureFactory & lookup_factory,
+                             LookupStructureFactory * lookup_factory,
                              bool with_counters, bool with_ageing) {
   std::unique_ptr<MatchUnitAbstract<IndirectIndex> > match_unit =
     create_match_unit<IndirectIndex>(match_type, size, match_key_builder,

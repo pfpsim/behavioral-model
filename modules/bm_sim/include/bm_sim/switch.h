@@ -557,7 +557,7 @@ class SwitchWContexts : public DevMgr, public RuntimeInterface {
     return contexts.at(cxt_id).add_component<T>(ptr);
   }
 
-  void set_lookup_factory(LookupStructureFactory * new_factory){
+  void set_lookup_factory(LookupStructureFactory * new_factory) {
     lookup_factory = new_factory;
   }
 
