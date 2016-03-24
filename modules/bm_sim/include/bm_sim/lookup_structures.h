@@ -62,6 +62,8 @@ class LookupStructure {
 template <class K>
 class LookupStructureFactoryPart {
  public:
+  //! Create an instance of a subclass of LookupStructure<K>, resetting
+  //! the unique_ptr `ptr` with the newly created structure.
   virtual void create(std::unique_ptr<LookupStructure<K>> * ptr,
                       size_t size, size_t nbytes_key) = 0;
 };
