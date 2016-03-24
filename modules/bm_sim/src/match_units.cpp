@@ -899,7 +899,6 @@ MatchUnitGeneric<K, V>::get_entry_(entry_handle_t handle,
 
   *match_key = this->match_key_builder.entry_to_match_params(entry.key);
   *value = &entry.value;
-  // TODO(gordon) is this ok for LPM and Exact?
   if (priority) *priority = get_priority(entry.key);
 
   return MatchErrorCode::SUCCESS;
@@ -914,13 +913,27 @@ MatchUnitGeneric<K, V>::dump_match_entry_(std::ostream *out,
   if (HANDLE_VERSION(handle) != entry.key.version)
     return MatchErrorCode::EXPIRED_HANDLE;
 
-  // TODO(antonin): avoid duplicate code, this is basically the same as for
-  // exact
   *out << "Dumping entry " << handle << "\n";
   this->dump_key_params(
       out, this->match_key_builder.entry_to_match_params(entry.key),
       get_priority(entry.key));
   return MatchErrorCode::SUCCESS;
+}
+
+static void dump_entry_key_extra_(std::ostream * stream,
+                                  const ExactMatchKey & key) {
+  (void) stream;
+  (void) key;
+}
+
+static void dump_entry_key_extra_(std::ostream * stream,
+                                  const LPMMatchKey & key) {
+  (*stream) << " / " << key.prefix_length;
+}
+
+static void dump_entry_key_extra_(std::ostream * stream,
+                                  const TernaryMatchKey & key) {
+  (*stream) << " &&& " << key.mask.to_hex();
 }
 
 template <typename K, typename V>
@@ -930,15 +943,11 @@ MatchUnitGeneric<K, V>::dump_(std::ostream *stream) const {
     const Entry &entry = entries[handle_];
     (*stream) << HANDLE_SET(entry.key.version, handle_) << ": "
               << this->match_key_builder.key_to_string(entry.key.data, " ");
-    /* XXX  switch(TYPE){
-      case LPM:
-        (*stream) << " / " << entry.prefix_length;
-        break;
-      case Ternary:
-        (*stream) << " &&& " << entry.mask.to_hex();
-        break;
-      default:case Exact:break;
-    }*/
+
+    // Print the mask in the case of a ternary entry, or the prefix length
+    // in the case of an LPM key
+    dump_entry_key_extra_(stream, entry.key);
+
     (*stream) << " => ";
     entry.value.dump(stream);
     (*stream) << "\n";
