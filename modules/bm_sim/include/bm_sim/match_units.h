@@ -395,11 +395,11 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
 
  public:
   MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder,
-      LookupStructureFactoryPart<K> & lookup_factory)
+      LookupStructureFactoryPart<K> * lookup_factory)
     : MatchUnitAbstract<V>(size, match_key_builder),
-      entries(size)
-  {
-    lookup_factory.create(lookupStructure, size, match_key_builder.get_nbytes_key());
+      entries(size) {
+    lookup_factory->create(&lookupStructure, size,
+                           match_key_builder.get_nbytes_key());
   }
 
  private:

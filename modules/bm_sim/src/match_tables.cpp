@@ -35,7 +35,7 @@ template <typename V>
 std::unique_ptr<MatchUnitAbstract<V> >
 create_match_unit(const std::string match_type, const size_t size,
                   const MatchKeyBuilder &match_key_builder,
-                  LookupStructureFactory & lookup_factory) {
+                  LookupStructureFactory * lookup_factory) {
   typedef MatchUnitExact<V> MUExact;
   typedef MatchUnitLPM<V> MULPM;
   typedef MatchUnitTernary<V> MUTernary;
@@ -90,7 +90,7 @@ MatchTableAbstract::apply_action(Packet *pkt) {
     BMLOG_DEBUG_PKT(*pkt, "Table '{}': hit with handle {}",
                     get_name(), handle);
     // TODO(antonin): change to trace?
-    BMLOG_DEBUG_PKT(*pkt, "{}", dump_entry_string_int(handle));
+    BMLOG_DEBUG_PKT(*pkt, "{}", dump_entry_string_(handle));
   } else {
     BMELOG(table_miss, *pkt, *this);
     BMLOG_DEBUG_PKT(*pkt, "Table '{}': miss", get_name());
@@ -226,15 +226,9 @@ MatchTableAbstract::get_next_node_default(p4object_id_t action_id) const {
 }
 
 std::string
-MatchTableAbstract::dump_entry_string(entry_handle_t handle) const {
-  ReadLock lock = lock_read();
-  return dump_entry_string_int(handle);
-}
-
-std::string
-MatchTableAbstract::dump_entry_string_int(entry_handle_t handle) const {
+MatchTableAbstract::dump_entry_string_(entry_handle_t handle) const {
   std::ostringstream ret;
-  if (dump_entry(&ret, handle) != MatchErrorCode::SUCCESS) {
+  if (dump_entry_(&ret, handle) != MatchErrorCode::SUCCESS) {
     return "";
   }
   return ret.str();
@@ -279,7 +273,7 @@ MatchTable::add_entry(const std::vector<MatchKeyParam> &match_key,
   // because we let go of the lock, there is a possibility of the entry being
   // removed
   // TODO(antonin): we can try to solve this by using an boost upgrade lock, but
-  // I don't want to make things to complicated for logging. Maybe ideally, we
+  // I don't want to make things too complicated for logging. Maybe ideally, we
   // would print the parameters passed to the function, and not dump the entry,
   // but it is convenient to be able to print the entry in exactly the same
   // format as for a lookup
@@ -429,8 +423,7 @@ MatchTable::dump(std::ostream *stream) const {
 }
 
 MatchErrorCode
-MatchTable::dump_entry(std::ostream *out, entry_handle_t handle) const {
-  ReadLock lock = lock_read();
+MatchTable::dump_entry_(std::ostream *out, entry_handle_t handle) const {
   MatchErrorCode rc;
   rc = match_unit->dump_match_entry(out, handle);
   if (rc != MatchErrorCode::SUCCESS) return rc;
@@ -451,7 +444,7 @@ std::unique_ptr<MatchTable>
 MatchTable::create(const std::string &match_type,
                    const std::string &name, p4object_id_t id,
                    size_t size, const MatchKeyBuilder &match_key_builder,
-                    LookupStructureFactory & lookup_factory,
+                   LookupStructureFactory * lookup_factory,
                    bool with_counters, bool with_ageing) {
   std::unique_ptr<MatchUnitAbstract<ActionEntry> > match_unit =
     create_match_unit<ActionEntry>(match_type, size, match_key_builder,
@@ -476,7 +469,7 @@ MatchTableIndirect::create(const std::string &match_type,
                            const std::string &name, p4object_id_t id,
                            size_t size,
                            const MatchKeyBuilder &match_key_builder,
-                            LookupStructureFactory & lookup_factory,
+                           LookupStructureFactory * lookup_factory,
                            bool with_counters, bool with_ageing) {
   std::unique_ptr<MatchUnitAbstract<IndirectIndex> > match_unit =
     create_match_unit<IndirectIndex>(match_type, size, match_key_builder,
@@ -766,9 +759,9 @@ MatchTableIndirect::dump(std::ostream *stream) const {
 }
 
 MatchErrorCode
-MatchTableIndirect::dump_entry_(std::ostream *out,
-                                entry_handle_t handle,
-                                const IndirectIndex **index) const {
+MatchTableIndirect::dump_entry_common(std::ostream *out,
+                                      entry_handle_t handle,
+                                      const IndirectIndex **index) const {
   MatchErrorCode rc;
   rc = match_unit->dump_match_entry(out, handle);
   if (rc != MatchErrorCode::SUCCESS) return rc;
@@ -780,11 +773,11 @@ MatchTableIndirect::dump_entry_(std::ostream *out,
 }
 
 MatchErrorCode
-MatchTableIndirect::dump_entry(std::ostream *out, entry_handle_t handle) const {
-  ReadLock lock = lock_read();
+MatchTableIndirect::dump_entry_(std::ostream *out,
+                                entry_handle_t handle) const {
   const IndirectIndex *index;
   MatchErrorCode rc;
-  rc = dump_entry_(out, handle, &index);
+  rc = dump_entry_common(out, handle, &index);
   if (rc != MatchErrorCode::SUCCESS) return rc;
   *out << "Action entry: " << action_entries[index->get_mbr()] << "\n";
   return MatchErrorCode::SUCCESS;
@@ -848,7 +841,7 @@ MatchTableIndirectWS::create(const std::string &match_type,
                              const std::string &name, p4object_id_t id,
                              size_t size,
                              const MatchKeyBuilder &match_key_builder,
-                              LookupStructureFactory & lookup_factory,
+                             LookupStructureFactory * lookup_factory,
                              bool with_counters, bool with_ageing) {
   std::unique_ptr<MatchUnitAbstract<IndirectIndex> > match_unit =
     create_match_unit<IndirectIndex>(match_type, size, match_key_builder,
@@ -1185,12 +1178,11 @@ MatchTableIndirectWS::dump(std::ostream *stream) const {
 }
 
 MatchErrorCode
-MatchTableIndirectWS::dump_entry(std::ostream *out,
-                                 entry_handle_t handle) const {
-  ReadLock lock = lock_read();
+MatchTableIndirectWS::dump_entry_(std::ostream *out,
+                                  entry_handle_t handle) const {
   const IndirectIndex *index;
   MatchErrorCode rc;
-  rc = dump_entry_(out, handle, &index);
+  rc = dump_entry_common(out, handle, &index);
   if (rc != MatchErrorCode::SUCCESS) return rc;
   if (index->is_mbr()) {
     *out << "Action entry: " << action_entries[index->get_mbr()] << "\n";

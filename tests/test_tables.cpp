@@ -21,6 +21,8 @@
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <thread>
+#include <future>
 #include "bm_sim/tables.h"
 
 using namespace bm;
@@ -107,14 +109,14 @@ class TableSizeTwo : public ::testing::Test {
     std::unique_ptr<MUType> match_unit;
 
     // true enables counters
-    match_unit = std::unique_ptr<MUType>(new MUType(t_size, key_builder, lookup_factory));
+    match_unit = std::unique_ptr<MUType>(new MUType(t_size, key_builder, &lookup_factory));
     table = std::unique_ptr<MatchTable>(
       new MatchTable("test_table", 0, std::move(match_unit), true)
     );
     table->set_next_node(0, nullptr);
     table->set_next_node_miss_default(&node_miss_default);
 
-    match_unit = std::unique_ptr<MUType>(new MUType(t_size, key_builder_w_valid, lookup_factory));
+    match_unit = std::unique_ptr<MUType>(new MUType(t_size, key_builder_w_valid, &lookup_factory));
     table_w_valid = std::unique_ptr<MatchTable>(
       new MatchTable("test_table", 0, std::move(match_unit))
     );
@@ -641,7 +643,7 @@ class TableIndirect : public ::testing::Test {
     // with counters, without ageing
     table = MatchTableIndirect::create("exact", "test_table", 0,
 				       table_size, key_builder,
-               lookup_factory,
+               &lookup_factory,
 				       true, false);
     table->set_next_node(0, nullptr);
     table->set_next_node_miss_default(&node_miss_default);
@@ -994,7 +996,7 @@ class TableIndirectWS : public ::testing::Test {
     // with counters, without ageing
     table = MatchTableIndirectWS::create("exact", "test_table", 0,
 					 table_size, key_builder,
-           lookup_factory,
+           &lookup_factory,
 					 true, false);
     table->set_next_node(0, nullptr);
 
@@ -1256,7 +1258,7 @@ class TableBigMask : public ::testing::Test {
     std::unique_ptr<MUType> match_unit;
 
     // false: no counters
-    match_unit = std::unique_ptr<MUType>(new MUType(2, key_builder, lookup_factory));
+    match_unit = std::unique_ptr<MUType>(new MUType(2, key_builder, &lookup_factory));
     table = std::unique_ptr<MatchTable>(
       new MatchTable("test_table", 0, std::move(match_unit), false)
     );
@@ -1543,7 +1545,7 @@ class AdvancedLPMTest : public AdvancedTest {
     key_builder.push_back_valid_header(testHeader3);
 
     std::unique_ptr<MULPM> match_unit;
-    match_unit = std::unique_ptr<MULPM>(new MULPM(t_size, key_builder, lookup_factory));
+    match_unit = std::unique_ptr<MULPM>(new MULPM(t_size, key_builder, &lookup_factory));
     table = std::unique_ptr<MatchTable>(
       new MatchTable("test_table", 0, std::move(match_unit), false)
     );
@@ -1627,7 +1629,7 @@ class AdvancedTernaryTest : public AdvancedTest {
     key_builder.push_back_valid_header(testHeader3);
 
     std::unique_ptr<MUTernary> match_unit;
-    match_unit = std::unique_ptr<MUTernary>(new MUTernary(t_size, key_builder, lookup_factory));
+    match_unit = std::unique_ptr<MUTernary>(new MUTernary(t_size, key_builder, &lookup_factory));
     table = std::unique_ptr<MatchTable>(
       new MatchTable("test_table", 0, std::move(match_unit), false)
     );
@@ -1707,7 +1709,7 @@ class TableEntryDebug : public ::testing::Test {
     set_key_builder();
 
     // true enables counters
-    match_unit = std::unique_ptr<MUType>(new MUType(t_size, key_builder, lookup_factory));
+    match_unit = std::unique_ptr<MUType>(new MUType(t_size, key_builder, &lookup_factory));
     table = std::unique_ptr<MatchTable>(
       new MatchTable("test_table", 0, std::move(match_unit), false)
     );
@@ -1908,4 +1910,94 @@ TYPED_TEST(TableEntryDebug, DumpEntry) {
   ASSERT_NE(MatchErrorCode::SUCCESS, this->table->dump_entry(&os, bad_handle));
 
   ASSERT_EQ("", this->table->dump_entry_string(bad_handle));
+}
+
+
+// added after a deadlock was found because of shared mutex acquired multiple
+// times by MatchTable::dump_entry_string()
+class TableDeadlock : public ::testing::Test {
+ protected:
+  static constexpr size_t t_size = 128u;
+
+  MatchKeyBuilder key_builder;
+  std::unique_ptr<MatchTable> table;
+
+  HeaderType testHeaderType;
+  header_id_t testHeader1{0};
+  ActionFn action_fn;
+  unsigned int action_data_v = 0xaba;
+  ActionData action_data;
+
+  PHVFactory phv_factory;
+  std::unique_ptr<PHVSourceIface> phv_source{nullptr};
+
+  TableDeadlock()
+      : testHeaderType("test_t", 0), action_fn("actionA", 0),
+        phv_source(PHVSourceIface::make_phv_source()) {
+    testHeaderType.push_back_field("f16", 16);
+    phv_factory.push_back_header("test1", testHeader1, testHeaderType);
+
+    action_data.push_back_action_data(action_data_v);
+
+    key_builder.push_back_field(testHeader1, 0, 16,
+                                MatchKeyParam::Type::EXACT, "h1.f0");
+    LookupStructureFactory factory;
+    std::unique_ptr<MUExact> match_unit(new MUExact(t_size, key_builder, &factory));
+    table = std::unique_ptr<MatchTable>(
+      new MatchTable("test_table", 0, std::move(match_unit), false)
+    );
+    table->set_next_node(0, nullptr);
+  }
+
+  virtual void SetUp() {
+    phv_source->set_phv_factory(0, &phv_factory);
+  }
+};
+
+extern bool WITH_VALGRIND; // defined in main.cpp
+
+// used to fail because of deadlock in dump_entry_string (when called from
+// apply_action); could only be observed when bmv2 was compiled with
+// -DBMLOG_DEBUG_ON
+TEST_F(TableDeadlock, DumpEntryString) {
+  auto modify_loop = [this](size_t iters, entry_handle_t handle) {
+    for (size_t i = 0; i < iters; i++) {
+      MatchErrorCode rc = table->modify_entry(handle, &action_fn, action_data);
+      ASSERT_EQ(MatchErrorCode::SUCCESS, rc);
+    }
+  };
+
+  auto apply_loop = [this](size_t iters) {
+    Packet packet = Packet::make_new(phv_source.get());
+    packet.get_phv()->get_header(testHeader1).mark_valid();
+    packet.get_phv()->get_field(testHeader1, 0).set("0xabcd");
+    for (size_t i = 0; i < iters; i++) {
+      table->apply_action(&packet);
+    }
+  };
+
+  std::vector<MatchKeyParam> match_key;
+  match_key.emplace_back(MatchKeyParam::Type::EXACT,
+                         std::string("\xab\xcd", 2));
+  entry_handle_t handle;
+  MatchErrorCode rc;
+  rc = table->add_entry(match_key, &action_fn, action_data, &handle, 1);
+  ASSERT_EQ(MatchErrorCode::SUCCESS, rc);
+
+  const size_t iterations = WITH_VALGRIND ? 100u : 100000u;
+
+  std::thread t1(modify_loop, iterations, handle);
+  std::thread t2(apply_loop, iterations);
+
+  auto timeout = std::chrono::seconds(30);
+
+  auto future = std::async(std::launch::async, &std::thread::join, &t2);
+  if (future.wait_for(timeout) == std::future_status::timeout) {
+    // thread has not terminated before timeout
+    ADD_FAILURE() << "Timeout expired\n";
+    // TODO(antonin): do something cleaner
+    std::terminate();
+  } else {
+    t1.join();
+  }
 }

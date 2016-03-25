@@ -108,7 +108,8 @@ P4Objects::build_expression(const Json::Value &json_expression,
 }
 
 int
-P4Objects::init_objects(std::istream *is, LookupStructureFactory & lookup_factory,
+P4Objects::init_objects(std::istream *is,
+                        LookupStructureFactory * lookup_factory,
                         int device_id, size_t cxt_id,
                         std::shared_ptr<TransportIface> notifications_transport,
                         const std::set<header_field_pair> &required_fields,

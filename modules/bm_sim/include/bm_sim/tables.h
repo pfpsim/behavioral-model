@@ -39,6 +39,7 @@ struct HasFactoryMethod {
   typedef std::unique_ptr<T> (*Signature)(
     const std::string &, const std::string &,
     p4object_id_t, size_t, const MatchKeyBuilder &,
+    LookupStructureFactory *,
     bool, bool);
 
   template <typename U, Signature> struct SFINAE {};
@@ -77,15 +78,14 @@ class MatchActionTable : public ControlFlowNode, public NamedP4Object {
       const std::string &name, p4object_id_t id,
       size_t size, const MatchKeyBuilder &match_key_builder,
       bool with_counters, bool with_ageing,
-      LookupStructureFactory & lookup_factory) {
+      LookupStructureFactory * lookup_factory) {
     static_assert(
         std::is_base_of<MatchTableAbstract, MT>::value,
         "incorrect template, needs to be a subclass of MatchTableAbstract");
 
-    // TODO(gordon) Why does this no longer work correctly ? FIXME
-    //static_assert(
-      //  HasFactoryMethod<MT>::value,
-        //"template class needs to have a create() static factory method");
+    static_assert(
+        HasFactoryMethod<MT>::value,
+        "template class needs to have a create() static factory method");
 
     std::unique_ptr<MT> match_table = MT::create(
       match_type, name, id, size, match_key_builder,
