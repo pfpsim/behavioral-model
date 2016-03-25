@@ -1941,7 +1941,8 @@ class TableDeadlock : public ::testing::Test {
 
     key_builder.push_back_field(testHeader1, 0, 16,
                                 MatchKeyParam::Type::EXACT, "h1.f0");
-    std::unique_ptr<MUExact> match_unit(new MUExact(t_size, key_builder));
+    LookupStructureFactory factory;
+    std::unique_ptr<MUExact> match_unit(new MUExact(t_size, key_builder, &factory));
     table = std::unique_ptr<MatchTable>(
       new MatchTable("test_table", 0, std::move(match_unit), false)
     );
