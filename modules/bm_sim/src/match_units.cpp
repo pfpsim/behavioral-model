@@ -761,30 +761,23 @@ namespace {
   // Utility to transparently either get the real priority value from a
   // ternary entry or simply return -1 for other types of entries
 
-  template <typename T,
-    typename std::enable_if<T::mut == MatchUnitType::TERNARY, int>::type = 0>
-  int get_priority(const T & entry) {
-    return entry.priority;
-  }
-  template <typename T,
-    typename std::enable_if<T::mut != MatchUnitType::TERNARY, int>::type = 0>
-  int get_priority(const T & entry) {
-    (void) entry;  // dodge unused param error
+  int get_priority(const MatchKey & key) {
+    (void) key;  // dodge unused param error
     return -1;
+  }
+
+  int get_priority(const TernaryMatchKey & key) {
+    return key.priority;
   }
 
   // Matching setter utility
 
-  template <typename T,
-    typename std::enable_if<T::mut == MatchUnitType::TERNARY, int>::type = 0>
-  void set_priority(T * entry, int p) {
-    entry->priority = p;
-  }
-  template <typename T,
-    typename std::enable_if<T::mut != MatchUnitType::TERNARY, int>::type = 0>
-  void set_priority(T * entry, int p) {
+  void set_priority(MatchKey * entry, int p) {
     (void) entry;  // dodge unused param error
     (void) p;
+  }
+  void set_priority(TernaryMatchKey * entry, int p) {
+    entry->priority = p;
   }
 
 }  // anonymous namespace
