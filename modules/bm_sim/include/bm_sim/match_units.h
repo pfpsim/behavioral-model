@@ -315,8 +315,9 @@ class MatchUnitAbstract : public MatchUnitAbstract_ {
                            V value,  // by value for possible std::move
                            entry_handle_t *handle,
                            int priority = -1);
-  MatchErrorCode add_entry(const std::vector<std::vector<MatchKeyParam>> &match_key,
-                            std::vector<V> &value,  // by value for possible std::move
+  MatchErrorCode add_entry(const std::vector<std::vector<MatchKeyParam>>
+                            &match_key,
+                            const std::vector<V> &value,
                             std::vector<entry_handle_t*> handle,
                             std::vector<int> priority = {-1});
 
@@ -355,8 +356,10 @@ class MatchUnitAbstract : public MatchUnitAbstract_ {
                                     V value,  // by value for possible std::move
                                     entry_handle_t *handle,
                                     int priority) = 0;
-  virtual MatchErrorCode add_entry_(const std::vector<std::vector<MatchKeyParam>> &match_key,
-                                    std::vector<V> &value,  // by value for possible std::move
+  virtual MatchErrorCode add_entry_(const std::vector<
+                                             std::vector<
+                                                MatchKeyParam>> &match_key,
+                                    const std::vector<V> &value,
                                     std::vector<entry_handle_t*> handle,
                                     std::vector<int> priority) = 0;
 
@@ -407,8 +410,9 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
                             V value,  // by value for possible std::move
                             entry_handle_t *handle,
                             int priority) override;
-  MatchErrorCode add_entry_(const std::vector<std::vector<MatchKeyParam>> &match_key,
-                            std::vector<V> &value,  // by value for possible std::move
+  MatchErrorCode add_entry_(const std::vector<std::vector<MatchKeyParam>>
+                              &match_key,
+                            const std::vector<V> &value,
                             std::vector<entry_handle_t*> handle,
                             std::vector<int> priority) override;
 

@@ -77,10 +77,10 @@ class LPMTrie : public LookupStructure<LPMMatchKey> {
     return bf_lpm_trie_has_prefix(trie, key.data.data(), key.prefix_length);
   }
 
-  virtual void store_entry(const std::vector<LPMMatchKey> & keys,
+  void store_entry(const std::vector<LPMMatchKey> & keys,
                            std::vector<internal_handle_t> handles) override {
     // check that the vectors are the same size
-    if(keys.size() == handles.size()) {
+    if (keys.size() == handles.size()) {
       int size = keys.size();
       for (int i = 0; i < size; i++) {
         bf_lpm_trie_insert(trie, keys[i].data.data(), keys[i].prefix_length,
@@ -147,14 +147,14 @@ class ExactMap : public LookupStructure<ExactMatchKey> {
   void store_entry(const std::vector<ExactMatchKey> & keys,
                            std::vector<internal_handle_t> handles) override {
     // check that the vectors are the same size
-    if(keys.size() == handles.size()) {
+    if (keys.size() == handles.size()) {
       int size = keys.size();
       for (int i = 0; i < size; i++) {
         entries_map[keys[i].data] = handles[i];
       }
     } else {
       throw std::runtime_error("Error in LookupStructure vector store_entry: "
-                               "there must be the same number of keys and handles");
+                           "there must be the same number of keys and handles");
     }
   }
 
@@ -214,14 +214,14 @@ class TernaryMap : public LookupStructure<TernaryMatchKey> {
   void store_entry(const std::vector<TernaryMatchKey> & keys,
                    std::vector<internal_handle_t> handles) override {
     // check that the vectors are the same size
-    if(keys.size() == handles.size()) {
+    if (keys.size() == handles.size()) {
       int size = keys.size();
       for (int i = 0; i < size; i++) {
         store_entry(keys[i], handles[i]);
       }
     } else {
       throw std::runtime_error("Error in LookupStructure vector store_entry: "
-                               "there must be the same number of keys and handles");
+                           "there must be the same number of keys and handles");
     }
   }
 

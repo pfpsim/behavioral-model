@@ -199,11 +199,12 @@ class MatchTable : public MatchTableAbstract {
                            entry_handle_t *handle,
                            int priority = -1);
 
-  MatchErrorCode add_entry(const std::vector<std::vector<MatchKeyParam>> &match_key,
-                          std::vector<const ActionFn *> action_fn,
-                          std::vector<ActionData> action_data,  // move it
-                          std::vector<entry_handle_t *> handle,
-                          std::vector<int> priority = {-1});
+  MatchErrorCode add_entry(const std::vector<std::vector<MatchKeyParam>>
+                             &match_key,
+                           std::vector<const ActionFn *> action_fn,
+                           std::vector<ActionData> action_data,
+                           std::vector<entry_handle_t *> handle,
+                           std::vector<int> priority = {-1});
 
   MatchErrorCode delete_entry(entry_handle_t handle);
 
@@ -362,11 +363,6 @@ class MatchTableIndirect : public MatchTableAbstract {
                            mbr_hdl_t mbr,
                            entry_handle_t *handle,
                            int priority = -1);
-
-  // MatchErrorCode add_entry(const std::vector<std::vector<MatchKeyParam>> &match_key,
-  //                         std::vector<mbr_hdl_t> mbr,
-  //                         std::vector<entry_handle_t *> handle,
-  //                         std::vector<int> priority = {-1});
 
   MatchErrorCode delete_entry(entry_handle_t handle);
 

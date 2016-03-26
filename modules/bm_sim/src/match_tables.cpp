@@ -294,16 +294,17 @@ MatchTable::add_entry(const std::vector<std::vector<MatchKeyParam>> &match_key,
                               std::vector<ActionData> action_data,  // move it
                               std::vector<entry_handle_t *> handle,
                               std::vector<int> priority) {
-  if(priority.size() == 1 && priority[0] == -1) {
-    for(unsigned long i = 0; i < match_key.size() - 1; i++) {
+  if (priority.size() == 1 && priority[0] == -1) {
+    for (size_t i = 0; i < match_key.size() - 1; i++) {
       priority.push_back(-1);
     }
   }
   std::vector<ActionEntry> action_entries;
-  for(unsigned long i = 0; i < action_data.size(); i++) {
+  for (size_t i = 0; i < action_data.size(); i++) {
     ActionFnEntry action_fn_entry(action_fn[i], std::move(action_data[i]));
     const ControlFlowNode *next_node = get_next_node(action_fn[i]->get_id());
-    action_entries.push_back(ActionEntry(std::move(action_fn_entry), next_node));
+    action_entries.push_back(
+                         ActionEntry(std::move(action_fn_entry), next_node));
   }
 
   MatchErrorCode rc = MatchErrorCode::SUCCESS;
@@ -703,7 +704,8 @@ MatchTableIndirect::set_default_member(mbr_hdl_t mbr) {
   if (rc == MatchErrorCode::SUCCESS) {
     BMLOG_DEBUG("Set default member for table '{}' to {}", get_name(), mbr);
   } else {
-    BMLOG_ERROR("Error when trying to set default member for table '{}' to {}",
+    BMLOG_ERROR(
+        "Error when trying to set default member for table '{}' to {}",
                 get_name(), mbr);
   }
 

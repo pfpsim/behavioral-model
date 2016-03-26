@@ -21,6 +21,8 @@
 #ifndef BM_SIM_INCLUDE_BM_SIM_LOOKUP_STRUCTURES_H_
 #define BM_SIM_INCLUDE_BM_SIM_LOOKUP_STRUCTURES_H_
 
+#include <vector>
+
 #include "match_unit_types.h"
 #include "bytecontainer.h"
 
@@ -47,8 +49,11 @@ class LookupStructure {
 
   //! Store multiple entries in the lookup structure simultaneously. This is
   //! useful for certain data strucutures which are far more optimal if
-  //! constructed in one shot. One example of such a data structure is a
-  //! Range Trie (right? TODO(gordon) ) 
+  //! constructed in one shot. One example of such a data structure is an
+  //! LC-Trie, which must be constructed with all entries in a single
+  //! operation. Further examples are Range-Tries and Multibit-Tries which
+  //! may be constructed incrementally, but which are much more optimal
+  //! if constructed in a single operation
   virtual void store_entry(const std::vector<K> & keys,
                            std::vector<internal_handle_t> handles) = 0;
 

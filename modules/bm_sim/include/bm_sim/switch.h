@@ -254,9 +254,10 @@ class SwitchWContexts : public DevMgr, public RuntimeInterface {
                const std::vector<std::string> &action_name,
                std::vector<ActionData> action_data,
                std::vector<entry_handle_t *> handle,
-               std::vector<int> priority = {-1}  /*only used for ternary*/) override {
-    if(priority.size() == 1 && priority[0] == -1) {
-      for(unsigned long i = 0; i < match_key.size() - 1; i++) {
+               // only used for ternary
+               std::vector<int> priority = {-1}) override {
+    if (priority.size() == 1 && priority[0] == -1) {
+      for (size_t i = 0; i < match_key.size() - 1; i++) {
         priority.push_back(-1);
       }
     }
