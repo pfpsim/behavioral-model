@@ -862,11 +862,12 @@ MatchUnitGeneric<K, V>::add_entry_(const std::vector<MatchKeyParam> &match_key,
   return MatchErrorCode::SUCCESS;
 }
 
+// TODO(gordon) performance: don't copy everything
 template <typename K, typename V>
 MatchErrorCode
-MatchUnitGeneric<K, V>::add_entry_(const std::vector<std::vector<MatchKeyParam>
+MatchUnitGeneric<K, V>::add_entry_(const std::vector<std::vector<MatchKeyParam>>
                                    &match_key,
-                        const std::vector<V> &value,
+                        std::vector<V> value,
                         std::vector<entry_handle_t*> handle,
                         std::vector<int> priority) {
   const auto &KeyB = this->match_key_builder;

@@ -359,7 +359,7 @@ class MatchUnitAbstract : public MatchUnitAbstract_ {
   virtual MatchErrorCode add_entry_(const std::vector<
                                              std::vector<
                                                 MatchKeyParam>> &match_key,
-                                    const std::vector<V> &value,
+                                    std::vector<V> value,
                                     std::vector<entry_handle_t*> handle,
                                     std::vector<int> priority) = 0;
 
@@ -412,7 +412,7 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
                             int priority) override;
   MatchErrorCode add_entry_(const std::vector<std::vector<MatchKeyParam>>
                               &match_key,
-                            const std::vector<V> &value,
+                            std::vector<V> value,
                             std::vector<entry_handle_t*> handle,
                             std::vector<int> priority) override;
 
