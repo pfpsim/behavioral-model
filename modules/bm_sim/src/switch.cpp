@@ -23,12 +23,14 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <streambuf>
 
 #include "bm_sim/switch.h"
 #include "bm_sim/P4Objects.h"
 #include "bm_sim/options_parse.h"
 #include "bm_sim/logger.h"
 #include "bm_sim/debugger.h"
+#include "md5.h"
 
 namespace bm {
 
@@ -81,17 +83,22 @@ SwitchWContexts::init_objects(const std::string &json_path, int dev_id,
     notifications_transport = std::move(transport);
   }
 
-
   for (size_t cxt_id = 0; cxt_id < nb_cxts; cxt_id++) {
     auto &cxt = contexts.at(cxt_id);
     cxt.set_device_id(device_id);
     cxt.set_notifications_transport(notifications_transport);
-    int status = cxt.init_objects(&fs, lookup_factory,
+    int status = cxt.init_objects(&fs, get_lookup_factory(),
                                   required_fields, arith_fields);
     fs.clear();
     fs.seekg(0, std::ios::beg);
     if (status != 0) return status;
     phv_source->set_phv_factory(cxt_id, &cxt.get_phv_factory());
+  }
+
+  {
+    std::unique_lock<std::mutex> config_lock(config_mutex);
+    current_config = std::string((std::istreambuf_iterator<char>(fs)),
+                                 std::istreambuf_iterator<char>());
   }
 
   return 0;
@@ -184,11 +191,15 @@ SwitchWContexts::load_new_config(const std::string &new_config) {
   if (!enable_swap) return ErrorCode::CONFIG_SWAP_DISABLED;
   std::istringstream ss(new_config);
   for (auto &cxt : contexts) {
-    ErrorCode rc = cxt.load_new_config(&ss, lookup_factory,
+    ErrorCode rc = cxt.load_new_config(&ss, get_lookup_factory(),
                                        required_fields, arith_fields);
     if (rc != ErrorCode::SUCCESS) return rc;
     ss.clear();
     ss.seekg(0, std::ios::beg);
+  }
+  {
+    std::unique_lock<std::mutex> config_lock(config_mutex);
+    current_config = new_config;
   }
   return ErrorCode::SUCCESS;
 }
@@ -237,6 +248,23 @@ SwitchWContexts::do_swap() {
     rc &= swap_done;
   }
   return rc;
+}
+
+std::string
+SwitchWContexts::get_config() {
+  std::unique_lock<std::mutex> config_lock(config_mutex);
+  return current_config;
+}
+
+std::string
+SwitchWContexts::get_config_md5() {
+  std::unique_lock<std::mutex> config_lock(config_mutex);
+  MD5_CTX cxt;
+  MD5_Init(&cxt);
+  MD5_Update(&cxt, current_config.data(), current_config.size());
+  unsigned char md5[16];
+  MD5_Final(md5, &cxt);
+  return std::string(reinterpret_cast<char *>(md5), sizeof(md5));
 }
 
 // Switch convenience class

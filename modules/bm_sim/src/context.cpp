@@ -46,7 +46,7 @@ Context::mt_add_entry(const std::string &table_name,
   assert(abstract_table);
   MatchTable *table = dynamic_cast<MatchTable *>(abstract_table);
   if (!table) return MatchErrorCode::WRONG_TABLE_TYPE;
-  const ActionFn *action = p4objects_rt->get_action(action_name);
+  const ActionFn *action = p4objects_rt->get_action(table_name, action_name);
   assert(action);
   return table->add_entry(
     match_key, action, std::move(action_data), handle, priority);
@@ -68,7 +68,7 @@ Context::mt_add_entry(const std::string &table_name,
 
   std::vector<const ActionFn*> action_fn_vector;
   for (size_t i = 0; i < action_name.size(); i++) {
-    const ActionFn *action = p4objects_rt->get_action(action_name[i]);
+    const ActionFn *action = p4objects_rt->get_action(table_name, action_name[i]);
     assert(action);
     action_fn_vector.push_back(action);
   }
@@ -87,7 +87,7 @@ Context::mt_set_default_action(const std::string &table_name,
   assert(abstract_table);
   MatchTable *table = dynamic_cast<MatchTable *>(abstract_table);
   if (!table) return MatchErrorCode::WRONG_TABLE_TYPE;
-  const ActionFn *action = p4objects_rt->get_action(action_name);
+  const ActionFn *action = p4objects_rt->get_action(table_name, action_name);
   assert(action);
   return table->set_default_action(action, std::move(action_data));
 }
@@ -115,7 +115,7 @@ Context::mt_modify_entry(const std::string &table_name,
   assert(abstract_table);
   MatchTable *table = dynamic_cast<MatchTable *>(abstract_table);
   if (!table) return MatchErrorCode::WRONG_TABLE_TYPE;
-  const ActionFn *action = p4objects_rt->get_action(action_name);
+  const ActionFn *action = p4objects_rt->get_action(table_name, action_name);
   assert(action);
   return table->modify_entry(handle, action, std::move(action_data));
 }
@@ -151,7 +151,7 @@ Context::mt_indirect_add_member(
   boost::shared_lock<boost::shared_mutex> lock(request_mutex);
   if ((rc = get_mt_indirect(table_name, &table)) != MatchErrorCode::SUCCESS)
     return rc;
-  const ActionFn *action = p4objects_rt->get_action(action_name);
+  const ActionFn *action = p4objects_rt->get_action(table_name, action_name);
   if (!action) return MatchErrorCode::INVALID_ACTION_NAME;
   return table->add_member(action, std::move(action_data), mbr);
 }
@@ -177,7 +177,7 @@ Context::mt_indirect_modify_member(const std::string &table_name,
   boost::shared_lock<boost::shared_mutex> lock(request_mutex);
   if ((rc = get_mt_indirect(table_name, &table)) != MatchErrorCode::SUCCESS)
     return rc;
-  const ActionFn *action = p4objects_rt->get_action(action_name);
+  const ActionFn *action = p4objects_rt->get_action(table_name, action_name);
   if (!action) return MatchErrorCode::INVALID_ACTION_NAME;
   return table->modify_member(mbr, action, std::move(action_data));
 }
@@ -451,6 +451,32 @@ Context::register_write(const std::string &register_name,
   return Register::SUCCESS;
 }
 
+Context::RegisterErrorCode
+Context::register_write_range(const std::string &register_name,
+                              const size_t start, const size_t end,
+                              Data value) {
+  boost::shared_lock<boost::shared_mutex> lock(request_mutex);
+  RegisterArray *register_array =
+    p4objects_rt->get_register_array(register_name);
+  if (!register_array) return Register::ERROR;
+  if (end > register_array->size() || start > end)
+    return Register::INVALID_INDEX;
+  auto register_lock = register_array->unique_lock();
+  for (size_t idx = start; idx < end; idx++)
+    register_array->at(idx).set(value);
+  return Register::SUCCESS;
+}
+
+Context::RegisterErrorCode
+Context::register_reset(const std::string &register_name) {
+  boost::shared_lock<boost::shared_mutex> lock(request_mutex);
+  RegisterArray *register_array =
+    p4objects_rt->get_register_array(register_name);
+  if (!register_array) return Register::ERROR;
+  register_array->reset_state();
+  return Register::SUCCESS;
+}
+
 MatchErrorCode
 Context::dump_table(const std::string& table_name,
                     std::ostream *stream) const {
@@ -502,7 +528,7 @@ Context::set_force_arith(bool v) {
 
 int
 Context::init_objects(std::istream *is,
-                      LookupStructureFactory * lookup_factory,
+                      LookupStructureFactory *lookup_factory,
                       const std::set<header_field_pair> &required_fields,
                       const std::set<header_field_pair> &arith_fields) {
   // initally p4objects_rt == p4objects, so this works
@@ -518,7 +544,7 @@ Context::init_objects(std::istream *is,
 Context::ErrorCode
 Context::load_new_config(
     std::istream *is,
-    LookupStructureFactory * lookup_factory,
+    LookupStructureFactory *lookup_factory,
     const std::set<header_field_pair> &required_fields,
     const std::set<header_field_pair> &arith_fields) {
   boost::unique_lock<boost::shared_mutex> lock(request_mutex);

@@ -63,7 +63,11 @@ P4Objects::build_expression(const Json::Value &json_expression,
       build_expression(json_right, &e2);
       expr->push_back_ternary_op(e1, e2);
     } else {
-      build_expression(json_left, expr);
+      // special handling for unary + and -, we set the left operand to 0
+      if ((op == "+" || op == "-") && json_left.isNull())
+        expr->push_back_load_const(Data(0));
+      else
+        build_expression(json_left, expr);
       build_expression(json_right, expr);
 
       ExprOpcode opcode = ExprOpcodesMap::get_opcode(op);
@@ -109,7 +113,7 @@ P4Objects::build_expression(const Json::Value &json_expression,
 
 int
 P4Objects::init_objects(std::istream *is,
-                        LookupStructureFactory * lookup_factory,
+                        LookupStructureFactory *lookup_factory,
                         int device_id, size_t cxt_id,
                         std::shared_ptr<TransportIface> notifications_transport,
                         const std::set<header_field_pair> &required_fields,
@@ -134,6 +138,9 @@ P4Objects::init_objects(std::istream *is,
     const Json::Value &cfg_fields = cfg_header_type["fields"];
     for (const auto cfg_field : cfg_fields) {
       const string field_name = cfg_field[0].asString();
+      bool is_signed = false;
+      if (cfg_field.size() > 2)
+        is_signed = cfg_field[2].asBool();
       if (cfg_field[1].asString() == "*") {  // VL field
         ArithExpression raw_expr;
         assert(cfg_header_type.isMember("length_exp"));
@@ -143,10 +150,11 @@ P4Objects::init_objects(std::istream *is,
         raw_expr.build();
         std::unique_ptr<VLHeaderExpression> VL_expr(
           new VLHeaderExpression(raw_expr));
-        header_type->push_back_VL_field(field_name, std::move(VL_expr));
+        header_type->push_back_VL_field(field_name, std::move(VL_expr),
+                                        is_signed);
       } else {
         int field_bit_width = cfg_field[1].asInt();
-        header_type->push_back_field(field_name, field_bit_width);
+        header_type->push_back_field(field_name, field_bit_width, is_signed);
       }
     }
 
@@ -658,7 +666,7 @@ P4Objects::init_objects(std::istream *is,
         }
       }
     }
-    add_action(action_name, std::move(action_fn));
+    add_action(action_id, std::move(action_fn));
   }
 
   // pipelines
@@ -835,7 +843,6 @@ P4Objects::init_objects(std::istream *is,
       MatchTableAbstract *table = get_abstract_match_table(table_name);
 
       const Json::Value &cfg_next_nodes = cfg_table["next_tables"];
-      const Json::Value &cfg_actions = cfg_table["actions"];
 
       auto get_next_node = [this](const Json::Value &cfg_next_node)
           -> const ControlFlowNode *{
@@ -844,13 +851,27 @@ P4Objects::init_objects(std::istream *is,
         return get_control_node(cfg_next_node.asString());
       };
 
+      std::string actions_key = cfg_table.isMember("action_ids") ? "action_ids"
+          : "actions";
+      const Json::Value &cfg_actions = cfg_table[actions_key];
       for (const auto &cfg_action : cfg_actions) {
-        const string action_name = cfg_action.asString();
-        // note that operator[] creates a null member if action_name does not
-        // exist
+        p4object_id_t action_id = 0;
+        string action_name = "";
+        ActionFn *action = nullptr;
+        if (actions_key == "action_ids") {
+          action_id = cfg_action.asInt();
+          action = get_action_by_id(action_id); assert(action);
+          action_name = action->get_name();
+        } else {
+          action_name = cfg_action.asString();
+          action = get_one_action_with_name(action_name); assert(action);
+          action_id = action->get_id();
+        }
+
         const Json::Value &cfg_next_node = cfg_next_nodes[action_name];
         const ControlFlowNode *next_node = get_next_node(cfg_next_node);
-        table->set_next_node(get_action(action_name)->get_id(), next_node);
+        table->set_next_node(action_id, next_node);
+        add_action_to_table(table_name, action_name, action);
       }
 
       if (cfg_next_nodes.isMember("__HIT__"))
@@ -918,6 +939,13 @@ P4Objects::init_objects(std::istream *is,
       NamedCalculation *calculation = get_named_calculation(calculation_name);
       checksum = new CalcBasedChecksum(checksum_name, checksum_id,
                                        header_id, field_offset, calculation);
+    }
+
+    if (cfg_checksum.isMember("if_cond") && !cfg_checksum["if_cond"].isNull()) {
+      auto cksum_condition = std::unique_ptr<Expression>(new Expression());
+      build_expression(cfg_checksum["if_cond"], cksum_condition.get());
+      cksum_condition->build();
+      checksum->set_checksum_condition(std::move(cksum_condition));
     }
 
     checksums.push_back(unique_ptr<Checksum>(checksum));

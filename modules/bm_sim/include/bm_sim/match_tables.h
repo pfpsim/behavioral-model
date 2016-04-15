@@ -240,7 +240,7 @@ class MatchTable : public MatchTableAbstract {
       const std::string &name,
       p4object_id_t id,
       size_t size, const MatchKeyBuilder &match_key_builder,
-      LookupStructureFactory * lookup_factory,
+      LookupStructureFactory *lookup_factory,
       bool with_counters, bool with_ageing);
 
  private:
@@ -400,7 +400,7 @@ class MatchTableIndirect : public MatchTableAbstract {
     const std::string &match_type,
     const std::string &name, p4object_id_t id,
     size_t size, const MatchKeyBuilder &match_key_builder,
-    LookupStructureFactory * lookup_factory,
+    LookupStructureFactory *lookup_factory,
     bool with_counters, bool with_ageing);
 
  protected:
@@ -493,7 +493,7 @@ class MatchTableIndirectWS : public MatchTableIndirect {
     const std::string &match_type,
     const std::string &name, p4object_id_t id,
     size_t size, const MatchKeyBuilder &match_key_builder,
-    LookupStructureFactory * lookup_factory,
+    LookupStructureFactory *lookup_factory,
     bool with_counters, bool with_ageing);
 
  protected:

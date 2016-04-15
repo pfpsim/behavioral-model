@@ -32,7 +32,7 @@
 #include <utility>  // for pair<>
 #include <memory>
 
-#include "match_unit_types.h"
+#include "match_key_types.h"
 #include "match_error_codes.h"
 #include "lookup_structures.h"
 #include "bytecontainer.h"
@@ -317,7 +317,7 @@ class MatchUnitAbstract : public MatchUnitAbstract_ {
                            int priority = -1);
   MatchErrorCode add_entry(const std::vector<std::vector<MatchKeyParam>>
                             &match_key,
-                            const std::vector<V> &value,
+                            std::vector<V> &value,
                             std::vector<entry_handle_t*> handle,
                             std::vector<int> priority = {-1});
 
@@ -359,7 +359,7 @@ class MatchUnitAbstract : public MatchUnitAbstract_ {
   virtual MatchErrorCode add_entry_(const std::vector<
                                              std::vector<
                                                 MatchKeyParam>> &match_key,
-                                    std::vector<V> value,
+                                    std::vector<V>& value,
                                     std::vector<entry_handle_t*> handle,
                                     std::vector<int> priority) = 0;
 
@@ -398,12 +398,11 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
 
  public:
   MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder,
-      LookupStructureFactoryPart<K> * lookup_factory)
-    : MatchUnitAbstract<V>(size, match_key_builder),
-      entries(size) {
-    lookup_factory->create(&lookupStructure, size,
-                           match_key_builder.get_nbytes_key());
-  }
+                   LookupStructureFactory *lookup_factory)
+    : MatchUnitAbstract<V>(size, match_key_builder), entries(size),
+      lookup_structure(
+        LookupStructureFactory::create<K>(
+          lookup_factory, size, match_key_builder.get_nbytes_key())) {}
 
  private:
   MatchErrorCode add_entry_(const std::vector<MatchKeyParam> &match_key,
@@ -412,7 +411,7 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
                             int priority) override;
   MatchErrorCode add_entry_(const std::vector<std::vector<MatchKeyParam>>
                               &match_key,
-                            std::vector<V> value,
+                            std::vector<V>& value,
                             std::vector<entry_handle_t*> handle,
                             std::vector<int> priority) override;
 
@@ -437,7 +436,7 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
 
  private:
   std::vector<Entry> entries{};
-  std::unique_ptr<LookupStructure<K>> lookupStructure;
+  std::unique_ptr<LookupStructure<K>> lookup_structure{nullptr};
 };
 
 // Alias all of our concrete MatchUnit types for convenience

@@ -433,6 +433,19 @@ service Standard {
     4:BmRegisterValue value
   ) throws (1:InvalidRegisterOperation ouch)
 
+  void bm_register_write_range(
+    1:i32 cxt_id,
+    2:string register_array_name,
+    3:i32 start_index,
+    4:i32 end_index,
+    5:BmRegisterValue value
+  ) throws (1:InvalidRegisterOperation ouch)
+
+  void bm_register_reset(
+    1:i32 cxt_id,
+    2:string register_array_name
+  ) throws (1:InvalidRegisterOperation ouch)
+
 
   // device manager
 
@@ -457,4 +470,7 @@ service Standard {
   )
 
   void bm_reset_state()
+
+  string bm_get_config()
+  string bm_get_config_md5()
 }
