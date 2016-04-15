@@ -78,7 +78,7 @@ class MatchActionTable : public ControlFlowNode, public NamedP4Object {
       const std::string &name, p4object_id_t id,
       size_t size, const MatchKeyBuilder &match_key_builder,
       bool with_counters, bool with_ageing,
-      LookupStructureFactory * lookup_factory) {
+      LookupStructureFactory *lookup_factory) {
     static_assert(
         std::is_base_of<MatchTableAbstract, MT>::value,
         "incorrect template, needs to be a subclass of MatchTableAbstract");

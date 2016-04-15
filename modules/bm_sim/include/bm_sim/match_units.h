@@ -32,7 +32,7 @@
 #include <utility>  // for pair<>
 #include <memory>
 
-#include "match_unit_types.h"
+#include "match_key_types.h"
 #include "match_error_codes.h"
 #include "lookup_structures.h"
 #include "bytecontainer.h"
@@ -387,12 +387,11 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
 
  public:
   MatchUnitGeneric(size_t size, const MatchKeyBuilder &match_key_builder,
-      LookupStructureFactoryPart<K> * lookup_factory)
-    : MatchUnitAbstract<V>(size, match_key_builder),
-      entries(size) {
-    lookup_factory->create(&lookupStructure, size,
-                           match_key_builder.get_nbytes_key());
-  }
+                   LookupStructureFactory *lookup_factory)
+    : MatchUnitAbstract<V>(size, match_key_builder), entries(size),
+      lookup_structure(
+        LookupStructureFactory::create<K>(
+          lookup_factory, size, match_key_builder.get_nbytes_key())) {}
 
  private:
   MatchErrorCode add_entry_(const std::vector<MatchKeyParam> &match_key,
@@ -421,7 +420,7 @@ class MatchUnitGeneric : public MatchUnitAbstract<V> {
 
  private:
   std::vector<Entry> entries{};
-  std::unique_ptr<LookupStructure<K>> lookupStructure;
+  std::unique_ptr<LookupStructure<K>> lookup_structure{nullptr};
 };
 
 // Alias all of our concrete MatchUnit types for convenience

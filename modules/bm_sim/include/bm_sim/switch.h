@@ -503,6 +503,20 @@ class SwitchWContexts : public DevMgr, public RuntimeInterface {
         register_name, idx, std::move(value));
   }
 
+  RegisterErrorCode
+  register_write_range(size_t cxt_id,
+                       const std::string &register_name,
+                       const size_t start, const size_t end,
+                       Data value) override {
+    return contexts.at(cxt_id).register_write_range(
+        register_name, start, end, std::move(value));
+  }
+
+  RegisterErrorCode
+  register_reset(size_t cxt_id, const std::string &register_name) override {
+    return contexts.at(cxt_id).register_reset(register_name);
+  }
+
   RuntimeInterface::ErrorCode
   reset_state() override;
 
@@ -518,6 +532,9 @@ class SwitchWContexts : public DevMgr, public RuntimeInterface {
 
   RuntimeInterface::ErrorCode
   swap_configs() override;
+
+  std::string get_config() override;
+  std::string get_config_md5() override;
 
   // ---------- End RuntimeInterface ----------
 
@@ -557,7 +574,9 @@ class SwitchWContexts : public DevMgr, public RuntimeInterface {
     return contexts.at(cxt_id).add_component<T>(ptr);
   }
 
-  void set_lookup_factory(LookupStructureFactory * new_factory) {
+  void
+  set_lookup_factory(
+      const std::shared_ptr<LookupStructureFactory> &new_factory) {
     lookup_factory = new_factory;
   }
 
@@ -568,11 +587,15 @@ class SwitchWContexts : public DevMgr, public RuntimeInterface {
   // std::vector
   std::vector<Context> contexts{};
 
+  LookupStructureFactory *get_lookup_factory() const {
+    return lookup_factory ? lookup_factory.get() : &default_lookup_factory;
+  }
+
   // Create an instance of the default lookup factory
   static LookupStructureFactory default_lookup_factory;
   // All Switches will refer to that instance unless explicitly
   // given a factory
-  LookupStructureFactory * lookup_factory = &default_lookup_factory;
+  std::shared_ptr<LookupStructureFactory> lookup_factory{nullptr};
 
   bool enable_swap{false};
 
@@ -593,6 +616,9 @@ class SwitchWContexts : public DevMgr, public RuntimeInterface {
   std::shared_ptr<TransportIface> notifications_transport{nullptr};
 
   mutable boost::shared_mutex ongoing_swap_mutex{};
+
+  std::string current_config{};
+  mutable std::mutex config_mutex{};
 };
 
 
@@ -670,8 +696,9 @@ class Switch : public SwitchWContexts {
     return get_context(0)->get_table_id(name);
   }
 
-  p4object_id_t get_action_id(const std::string &name) {
-    return get_context(0)->get_action_id(name);
+  p4object_id_t get_action_id(const std::string &table_name,
+                              const std::string &action_name) {
+    return get_context(0)->get_action_id(table_name, action_name);
   }
 
   // to avoid C++ name hiding

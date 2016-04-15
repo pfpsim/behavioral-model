@@ -136,8 +136,9 @@ class Context final {
     return p4objects->get_match_action_table(name)->get_id();
   }
 
-  p4object_id_t get_action_id(const std::string &name) {
-    return p4objects->get_action(name)->get_id();
+  p4object_id_t get_action_id(const std::string &table_name,
+                              const std::string &action_name) {
+    return p4objects->get_action(table_name, action_name)->get_id();
   }
 
  private:
@@ -295,6 +296,13 @@ class Context final {
   RegisterErrorCode
   register_write(const std::string &register_name,
                  const size_t idx, Data value);
+
+  RegisterErrorCode
+  register_write_range(const std::string &register_name,
+                       const size_t start, const size_t end, Data value);
+
+  RegisterErrorCode
+  register_reset(const std::string &register_name);
 
   MatchErrorCode
   dump_table(const std::string& table_name,

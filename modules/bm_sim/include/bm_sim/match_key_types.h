@@ -18,8 +18,10 @@
  *
  */
 
-#ifndef BM_SIM_INCLUDE_BM_SIM_MATCH_UNIT_TYPES_H_
-#define BM_SIM_INCLUDE_BM_SIM_MATCH_UNIT_TYPES_H_
+#ifndef BM_SIM_INCLUDE_BM_SIM_MATCH_KEY_TYPES_H_
+#define BM_SIM_INCLUDE_BM_SIM_MATCH_KEY_TYPES_H_
+
+#include <limits>
 
 #include "bytecontainer.h"
 
@@ -34,8 +36,8 @@ enum class MatchUnitType {
 
 // Entry types.
 struct MatchKey {
-  inline MatchKey() {}
-  inline MatchKey(ByteContainer data, uint32_t version)
+  MatchKey() {}
+  MatchKey(ByteContainer data, uint32_t version)
     : data(std::move(data)), version(version) {}
 
   ByteContainer data{};
@@ -49,8 +51,8 @@ struct ExactMatchKey : public MatchKey {
 };
 
 struct LPMMatchKey : public MatchKey {
-  inline LPMMatchKey() {}
-  inline LPMMatchKey(ByteContainer data, int prefix_length, uint32_t version)
+  LPMMatchKey() {}
+  LPMMatchKey(ByteContainer data, int prefix_length, uint32_t version)
     : MatchKey(data, version), prefix_length(prefix_length) {}
 
   int prefix_length{0};
@@ -59,18 +61,21 @@ struct LPMMatchKey : public MatchKey {
 };
 
 struct TernaryMatchKey : public MatchKey {
-  inline TernaryMatchKey() {}
-  inline TernaryMatchKey(ByteContainer data, ByteContainer mask, int priority,
+  TernaryMatchKey() {}
+  TernaryMatchKey(ByteContainer data, ByteContainer mask, int priority,
       uint32_t version)
     : MatchKey(data, version), mask(std::move(mask)),
     priority(priority) {}
 
   ByteContainer mask{};
-  int priority{0};
+  // This is initialized to `max` because lookups search for the matching
+  // key with the minimum priority, this ensures that default constructed
+  // TernaryMatchKey's will never be matched.
+  int priority{std::numeric_limits<decltype(priority)>::max()};
 
   static constexpr MatchUnitType mut = MatchUnitType::TERNARY;
 };
 
 }  // namespace bm
 
-#endif  // BM_SIM_INCLUDE_BM_SIM_MATCH_UNIT_TYPES_H_
+#endif  // BM_SIM_INCLUDE_BM_SIM_MATCH_KEY_TYPES_H_
