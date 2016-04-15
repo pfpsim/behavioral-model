@@ -53,6 +53,31 @@ Context::mt_add_entry(const std::string &table_name,
 }
 
 MatchErrorCode
+Context::mt_add_entry(const std::string &table_name,
+            const std::vector<std::vector<MatchKeyParam>> &match_key,
+            const std::vector<std::string> &action_name,
+            std::vector<ActionData> action_data,
+            std::vector<entry_handle_t *> handle,
+            std::vector<int> priority) {
+  boost::shared_lock<boost::shared_mutex> lock(request_mutex);
+  MatchTableAbstract *abstract_table =
+    p4objects_rt->get_abstract_match_table(table_name);
+  assert(abstract_table);
+  MatchTable *table = dynamic_cast<MatchTable *>(abstract_table);
+  if (!table) return MatchErrorCode::WRONG_TABLE_TYPE;
+
+  std::vector<const ActionFn*> action_fn_vector;
+  for (size_t i = 0; i < action_name.size(); i++) {
+    const ActionFn *action = p4objects_rt->get_action(table_name, action_name[i]);
+    assert(action);
+    action_fn_vector.push_back(action);
+  }
+
+  return table->add_entry(
+    match_key, action_fn_vector, std::move(action_data), handle, priority);
+}
+
+MatchErrorCode
 Context::mt_set_default_action(const std::string &table_name,
                                const std::string &action_name,
                                ActionData action_data) {

@@ -70,6 +70,23 @@ class LPMTrieStructure : public LPMLookupStructure {
     return trie.has_prefix(key.data, key.prefix_length);
   }
 
+  // TODO(gordon) update
+  void store_entry(const std::vector<LPMMatchKey> & keys,
+                           std::vector<internal_handle_t> handles) override {
+    // check that the vectors are the same size
+    if (keys.size() == handles.size()) {
+      int size = keys.size();
+      for (int i = 0; i < size; i++) {
+        trie.insert_prefix(keys[i].data, keys[i].prefix_length,
+                           reinterpret_cast<uintptr_t>(handles[i]));
+      }
+    } else {
+      throw std::runtime_error(
+          "Error in LookupStructure vector store_entry: "
+          "there must be the same number of keys and handles");
+    }
+  }
+
   void add_entry(const LPMMatchKey &key,
                  internal_handle_t handle) override {
     trie.insert_prefix(key.data, key.prefix_length,
@@ -117,6 +134,20 @@ class ExactMap : public ExactLookupStructure {
 
   void delete_entry(const ExactMatchKey &key) override {
     entries_map.erase(key.data);
+  }
+
+  void store_entry(const std::vector<ExactMatchKey> & keys,
+                           std::vector<internal_handle_t> handles) override {
+    // check that the vectors are the same size
+    if (keys.size() == handles.size()) {
+      int size = keys.size();
+      for (int i = 0; i < size; i++) {
+        entries_map[keys[i].data] = handles[i];
+      }
+    } else {
+      throw std::runtime_error("Error in LookupStructure vector store_entry: "
+                           "there must be the same number of keys and handles");
+    }
   }
 
   void clear() override {
@@ -172,6 +203,19 @@ class TernaryMap : public TernaryLookupStructure {
     return false;
   }
 
+  void store_entry(const std::vector<TernaryMatchKey> & keys,
+                   std::vector<internal_handle_t> handles) override {
+    // check that the vectors are the same size
+    if (keys.size() == handles.size()) {
+      int size = keys.size();
+      for (int i = 0; i < size; i++) {
+        add_entry(keys[i], handles[i]);
+      }
+    } else {
+      throw std::runtime_error("Error in LookupStructure vector store_entry: "
+                           "there must be the same number of keys and handles");
+    }
+  }
   bool entry_exists(const TernaryMatchKey &key) const override {
     const VectorEntry *entry = find_vec_entry(key);
     return (entry != nullptr);
